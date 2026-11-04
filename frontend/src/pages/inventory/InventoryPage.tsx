@@ -13,10 +13,13 @@ import InventoryItemEditModal from './components/InventoryItemEditModal';
 import InventoryItemCreateModal from './components/InventoryItemCreateModal';
 import InventoryItemIngredientModal from './components/InventoryItemIngredientModal';
 import { createInventoryItem, getItemCategoryOptions, getItems, getInventoryOverview, getItemMaterialDetails, updateInventoryItem, InventoryCreatedItem, InventoryItem, InventoryMaterialDetails, InventoryOverview, InventoryItemCreate, InventoryItemUpdate } from '../../services/inventoryApi';
-import { getCurrentUserFromSession } from '../../services/authApi'; // <-- Adjust path if needed
+import { useCurrentUser } from '../../utils/currentUser';
 import { getCurrentDateSAST } from '../../Date/dateUtils';
 import editIcon from '../../assets/images/Edit Icon.png';
 import viewIcon from '../../assets/images/View Icon.png';
+
+// An item appears once per branch, so a row is identified by item and branch together
+const getRowKey = (item: InventoryItem): string => `${item.id}-${item.branchId}`;
 
 function InventoryPage() {
   const currentDate = getCurrentDateSAST();
@@ -28,17 +31,18 @@ function InventoryPage() {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [inventoryOverview, setInventoryOverview] = useState<InventoryOverview>({ items: [], previewRows: [], alerts: [], stats: [], tabs: [] });
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
-  const [expandedViewItemId, setExpandedViewItemId] = useState<number | null>(null);
+  const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null);
   const [materialDetailsById, setMaterialDetailsById] = useState<Record<number, InventoryMaterialDetails | null>>({});
   const [loadingMaterialItemId, setLoadingMaterialItemId] = useState<number | null>(null);
-  const [editingItemId, setEditingItemId] = useState<number | null>(null);
-  const [savingEditItemId, setSavingEditItemId] = useState<number | null>(null);
+  const [editingRowKey, setEditingRowKey] = useState<string | null>(null);
+  const [savingEditRowKey, setSavingEditRowKey] = useState<string | null>(null);
   const [creatingItem, setCreatingItem] = useState(false);
   const [createItemOpen, setCreateItemOpen] = useState(false);
   const [ingredientItem, setIngredientItem] = useState<InventoryCreatedItem | null>(null);
 
-  // Added state to track the logged-in user's branch
-  const [loggedInBranchId, setLoggedInBranchId] = useState<number | null>(null);
+  // The logged-in user's branch (stored at login) scopes the low-stock alerts
+  const currentUser = useCurrentUser();
+  const loggedInBranchId = currentUser?.branchId ?? null;
 
   useEffect(() => {
     let mounted = true;
@@ -60,30 +64,17 @@ function InventoryPage() {
         }
       });
 
-    // Fetch Logged-in User
-    getCurrentUserFromSession()
-      .then((user) => {
-        if (mounted && user) {
-          // Safely extract branchId (handling potential naming variations)
-          const branchId = (user as any).branchId ?? (user as any).BranchId;
-          if (branchId) {
-            setLoggedInBranchId(Number(branchId));
-          }
-        }
-      })
-      .catch((error) => console.warn('Could not load user session for branch filtering', error));
-
     return () => {
       mounted = false;
     };
   }, []);
 
   const closeExpandedView = (): void => {
-    setExpandedViewItemId(null);
+    setExpandedRowKey(null);
   };
 
   const closeEditModal = (): void => {
-    setEditingItemId(null);
+    setEditingRowKey(null);
   };
 
   const openCreateModal = (): void => {
@@ -100,13 +91,14 @@ function InventoryPage() {
 
   const handleViewClick = async (item: InventoryItem): Promise<void> => {
     const numericItemId = Number(item.id);
+    const rowKey = getRowKey(item);
 
-    if (expandedViewItemId === numericItemId) {
+    if (expandedRowKey === rowKey) {
       closeExpandedView();
       return;
     }
 
-    setExpandedViewItemId(numericItemId);
+    setExpandedRowKey(rowKey);
 
     if (Number.isNaN(numericItemId) || materialDetailsById[numericItemId] !== undefined) {
       return;
@@ -127,23 +119,24 @@ function InventoryPage() {
 
   const handleEditClick = (item: InventoryItem): void => {
     closeExpandedView();
-    setEditingItemId(Number(item.id));
+    setEditingRowKey(getRowKey(item));
   };
 
   const handleSaveEdit = async (itemId: number, payload: InventoryItemUpdate): Promise<void> => {
-    setSavingEditItemId(itemId);
+    const rowKey = editingRowKey;
+    setSavingEditRowKey(rowKey);
 
     try {
       await updateInventoryItem(itemId, payload);
       const overview = await getInventoryOverview();
       setInventoryItems(overview.items);
       setInventoryOverview(overview);
-      setEditingItemId(null);
+      setEditingRowKey(null);
     } catch (error) {
       console.error(`Failed to save item ${itemId}`, error);
       throw error;
     } finally {
-      setSavingEditItemId((current) => (current === itemId ? null : current));
+      setSavingEditRowKey((current) => (current === rowKey ? null : current));
     }
   };
 
@@ -239,18 +232,6 @@ function InventoryPage() {
       });
   }, [activeTab, sourceItems, search, sortBy, status, zone]);
 
-  useEffect(() => {
-    console.log('InventoryPage filteredItems', {
-      activeTab,
-      search,
-      status,
-      zone,
-      sortBy,
-      filteredCount: filteredItems.length,
-      filteredItems,
-    });
-  }, [activeTab, search, status, zone, sortBy, filteredItems]);
-
   return (
     <div className="space-y-4 sm:space-y-5">
       <PageHeader
@@ -312,13 +293,13 @@ function InventoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredItems.map((item, index) => {
+                {filteredItems.map((item) => {
                   const itemId = Number(item.id);
-                  const isExpanded = expandedViewItemId === itemId;
-                  const uniqueRowKey = `${item.id}-${item.location || 'none'}-${index}`;
+                  const rowKey = getRowKey(item);
+                  const isExpanded = expandedRowKey === rowKey;
 
                   return (
-                    <React.Fragment key={uniqueRowKey}>
+                    <React.Fragment key={rowKey}>
                       <tr className={`border-b border-border/70 ${isExpanded ? 'bg-bg/30' : ''}`}>
                         <td className="py-2.5 pr-3">
                           <p className="font-semibold text-text">{item.name}</p>
@@ -349,7 +330,7 @@ function InventoryPage() {
                             type="button"
                             className={`icon-action-button ${isExpanded ? 'border-primary bg-bg text-text' : ''}`}
                             aria-label={`View ${item.name}`}
-                            aria-controls={`inventory-details-${item.id}`}
+                            aria-controls={`inventory-details-${rowKey}`}
                             aria-expanded={isExpanded}
                             onClick={() => {
                               void handleViewClick(item);
@@ -364,7 +345,7 @@ function InventoryPage() {
                       {isExpanded ? (
                         <tr className="border-b border-border/70 bg-app/60">
                           <td colSpan={8} className="px-0 py-3">
-                            <div id={`inventory-details-${item.id}`} className="inventory-view-details px-0 sm:px-1">
+                            <div id={`inventory-details-${rowKey}`} className="inventory-view-details px-0 sm:px-1">
                               <InventoryMaterialsPopover
                                 loading={loadingMaterialItemId === itemId && materialDetailsById[itemId] === undefined}
                                 details={materialDetailsById[itemId] ?? null}
@@ -385,9 +366,9 @@ function InventoryPage() {
             ) : null}
           </div>
           <InventoryItemEditModal
-            item={editingItemId != null ? sourceItems.find((candidate) => Number(candidate.id) === editingItemId) ?? null : null}
-            open={editingItemId != null}
-            saving={savingEditItemId === editingItemId}
+            item={editingRowKey != null ? sourceItems.find((candidate) => getRowKey(candidate) === editingRowKey) ?? null : null}
+            open={editingRowKey != null}
+            saving={savingEditRowKey != null && savingEditRowKey === editingRowKey}
             onClose={closeEditModal}
             onSave={handleSaveEdit}
             categoryOptions={categoryOptions}
