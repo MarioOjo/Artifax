@@ -15,6 +15,8 @@ namespace Backend.Tests.Postgres
     {
         public const string AdminEmail = "admin@artifax.local";
         public const string AdminPassword = "ArtifaxDev1";
+        public const string DemoEmail = "demo@artifax.local";
+        public const string DemoPassword = "ArtifaxDemo1";
 
         private readonly string _connectionString;
 
@@ -32,6 +34,8 @@ namespace Backend.Tests.Postgres
             builder.UseSetting("Database:SeedDemoData", "true");
             builder.UseSetting("Database:DevAdminEmail", AdminEmail);
             builder.UseSetting("Database:DevAdminPassword", AdminPassword);
+            builder.UseSetting("Database:DemoEmail", DemoEmail);
+            builder.UseSetting("Database:DemoPassword", DemoPassword);
         }
 
         // The session cookie is Secure, so the client must use https (TestServer accepts any scheme)
