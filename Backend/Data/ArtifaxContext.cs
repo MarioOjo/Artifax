@@ -16,6 +16,7 @@ namespace Artifax.Data
         public DbSet<Item> Items { get; set; }
         public DbSet<ItemIngredient> ItemIngredients { get; set; }
         public DbSet<BranchItemCapacity> BranchItemCapacities { get; set; }
+        public DbSet<OrderMaterial> OrderMaterials { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // 1. Existing Group Relationships (DO NOT REMOVE)
@@ -49,6 +50,13 @@ namespace Artifax.Data
                 .Property(o => o.TotalTime)
                 .HasDefaultValue(0);
             
+            // Stock rows carry a row version so two orders cannot both spend the same stock
+            modelBuilder.Entity<BranchItemCapacity>().Property(bic => bic.Version).IsRowVersion();
+
+            // Materials taken by an order belong to it; the item they refer to is history and is never deleted
+            modelBuilder.Entity<OrderMaterial>().HasOne(m => m.Order).WithMany(o => o.Materials).HasForeignKey(m => m.OrderID).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<OrderMaterial>().HasOne(m => m.Item).WithMany().HasForeignKey(m => m.ItemID).OnDelete(DeleteBehavior.Restrict);
+
             // OrderHistory relationships
             modelBuilder.Entity<OrderHistory>().HasOne(oh => oh.Order).WithMany(o => o.OrderHistories).HasForeignKey(oh => oh.OrderID);
             modelBuilder.Entity<OrderHistory>().HasOne(oh => oh.ChangedByEmployee).WithMany().HasForeignKey(oh => oh.ChangedByEmployeeID).IsRequired(false);

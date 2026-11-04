@@ -59,6 +59,12 @@ namespace Backend.Migrations
                     b.Property<int>("ItemQuantity")
                         .HasColumnType("integer");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("BranchItemCapacityID");
 
                     b.HasIndex("BranchID");
@@ -256,6 +262,32 @@ namespace Backend.Migrations
                     b.ToTable("OrderHistories");
                 });
 
+            modelBuilder.Entity("Artifax.Models.OrderMaterial", b =>
+                {
+                    b.Property<int>("OrderMaterialID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("OrderMaterialID"));
+
+                    b.Property<int>("ItemID")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OrderID")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("OrderMaterialID");
+
+                    b.HasIndex("ItemID");
+
+                    b.HasIndex("OrderID");
+
+                    b.ToTable("OrderMaterials");
+                });
+
             modelBuilder.Entity("Artifax.Models.BranchItemCapacity", b =>
                 {
                     b.HasOne("Artifax.Models.Branch", "Branch")
@@ -349,6 +381,25 @@ namespace Backend.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("Artifax.Models.OrderMaterial", b =>
+                {
+                    b.HasOne("Artifax.Models.Item", "Item")
+                        .WithMany()
+                        .HasForeignKey("ItemID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Artifax.Models.Order", "Order")
+                        .WithMany("Materials")
+                        .HasForeignKey("OrderID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Item");
+
+                    b.Navigation("Order");
+                });
+
             modelBuilder.Entity("Artifax.Models.Branch", b =>
                 {
                     b.Navigation("BranchItemCapacities");
@@ -369,6 +420,8 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("Artifax.Models.Order", b =>
                 {
+                    b.Navigation("Materials");
+
                     b.Navigation("OrderHistories");
                 });
 #pragma warning restore 612, 618

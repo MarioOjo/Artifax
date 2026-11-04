@@ -20,5 +20,6 @@ namespace Artifax.Models
         public Item? Item { get; set; }
         public Employee? Employee { get; set; }
         public ICollection<OrderHistory> OrderHistories { get; set; } = new List<OrderHistory>();
+        public ICollection<OrderMaterial> Materials { get; set; } = new List<OrderMaterial>();
     }
 }
