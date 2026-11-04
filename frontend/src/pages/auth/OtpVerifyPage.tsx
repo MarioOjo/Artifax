@@ -157,6 +157,8 @@ function OtpVerifyPage() {
     } catch (err) {
       // 🌟 FAILURE: Switch status view inside the component
       console.log(err);
+      // Surface the server's reason (e.g. "Session expired." vs "Invalid 2FA Verification Code")
+      setErrorMessage(err instanceof Error ? err.message : '');
       setStatus('failed');
     }
   };
@@ -269,7 +271,7 @@ function OtpVerifyPage() {
                   </svg>
                 </div>
                 <h1>Verification Failed</h1>
-                <p>The code entered did not match. Try again with the latest OTP.</p>
+                <p>{errorMessage || 'The code entered did not match. Try again with the latest OTP.'}</p>
               </div>
 
               <div className="login-actions-column">
