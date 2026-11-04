@@ -9,8 +9,8 @@ Each entry says what was wrong, why it mattered, what changed, and the commit th
 | Area | Changes |
 | --- | --- |
 | [1. Running on new infrastructure](#1-running-on-new-infrastructure) | 7 |
-| [2. Bug fixes from a code review](#2-bug-fixes-from-a-code-review) | 17 |
-| [3. Enhancement: secure, transactional crafting](#3-enhancement-secure-transactional-crafting) | 5 |
+| [2. Bug fixes from a code review](#2-bug-fixes-from-a-code-review) | 21 |
+| [3. Enhancement: secure, transactional crafting](#3-enhancement-secure-transactional-crafting) | 6 |
 | [4. Known issues](#4-known-issues) | — |
 
 ---
@@ -105,8 +105,13 @@ least serious.
 | 2.15 | Queue counter counted paused orders against the 3-active limit | fixed |
 | 2.16 | Crafting history showed "Unknown" for every employee | fixed |
 | 2.17 | Cancelling a user edit could set their password to "************" | fixed |
+| 2.18 | Anyone with a password could enrol their own 2FA authenticator | fixed |
+| 2.19 | Every signed-in user could list everyone's email address | fixed |
+| 2.20 | Vulnerable dependencies | fixed |
+| 2.21 | 15 frontend build warnings and an outdated README test section | fixed |
 
-Items 2.14 to 2.17 were found while bringing the tests up to date.
+Items 2.14 to 2.17 were found while bringing the tests up to date. Items 2.18 and 2.19 were found while designing the
+demo account (3.6).
 
 ### 2.1 Editing an inventory row could overwrite another branch's stock
 - **Problem:** Each item appears once per branch, but the inventory page tracked the row being edited by item ID
@@ -232,6 +237,41 @@ Items 2.14 to 2.17 were found while bringing the tests up to date.
 - **Evidence:** New regression test; on the old code the saved password was "************".
 - **Commit:** `7e95d30`
 
+### 2.18 Anyone with a password could enrol their own 2FA authenticator
+- **Problem:** The 2FA setup QR code, and with it the secret, was shown after the password step on every sign-in,
+  not only the first. Anyone who learned a password could scan it into their own phone and pass 2FA, so 2FA added
+  no protection.
+- **Fix:** The first successful code marks the account's 2FA as confirmed, and setup is refused from then on. To
+  avoid locking out someone who loses their phone, admins get a **Reset 2FA** action: it clears the secret, and the
+  next sign-in shows a new QR code. The verification screen explains when setup is unavailable.
+- **Evidence:** Real-database tests: setup is offered before confirmation and refused after it, and an admin reset
+  re-opens setup with a new secret. With the check removed, the setup test fails.
+- **Commits:** `e040199`, `2ccaf99`, `316f2ff`
+
+### 2.19 Every signed-in user could list everyone's email address
+- **Problem:** The user list endpoints returned every employee's email to any signed-in user. With a public demo
+  account, that would have published real email addresses.
+- **Fix:** Non-admins only see their own email. Admins, who manage users, still see all of them.
+- **Evidence:** A test signs in as the demo user and as an admin and compares what each sees.
+- **Commits:** `e040199`, `2ccaf99`
+
+### 2.20 Vulnerable dependencies
+- **Problem:** The build flagged `System.Security.Cryptography.Pkcs` 9.0.4 (high and moderate) and
+  `Microsoft.OpenApi` 2.4.1 (high). Both came in indirectly. The first came from the SQL Server database provider,
+  which the app never used because it runs on PostgreSQL.
+- **Fix:** Removed the SQL Server provider, took the patch releases of Swashbuckle and ASP.NET Core OpenAPI, and the
+  EF Core 10.0.14 and Npgsql 10.0.3 patch releases. `dotnet list package --vulnerable --include-transitive` now
+  reports nothing.
+- **Commit:** `8caaa06`
+
+### 2.21 Build warnings and an outdated README test section
+- **Problem:** The frontend production build reported 15 ESLint warnings: unused code, and React hooks with
+  incomplete dependency lists. The README's test section still described the team's hand-over state.
+- **Fix:** Removed the unused code. Data loaders used by effects are memoized on their real inputs, so effects
+  re-run when those inputs change and not on every render. The build now compiles with no warnings. The README
+  reports the current suites and freshly measured coverage.
+- **Commits:** `848ebcc`, `c748ccd`
+
 ---
 
 ## 3. Enhancement: secure, transactional crafting
@@ -352,6 +392,18 @@ design changes rather than small fixes:
   frontend passed 49 of 49 with a clean type check, and the backend built and passed its non-Docker tests. Backend
   116 of 116 passing locally.
 - **Commits:** `8edf764`, `259aa7f`
+
+### 3.6 Read-only demo account
+- **Problem:** Every account is created by an administrator, so people downloading the app from the portfolio could
+  not get in.
+- **Change:** A `Demo` role can sign in and read everything. Any write is refused with 403 and a "read-only"
+  message. The rule is part of the global authorization policy, so it covers every endpoint. Visitors enrol their
+  own authenticator: setup stays open for this account only. The app shows a read-only banner and lets the demo
+  view Analytics. The account is created from two configuration settings, so production needs no manual SQL.
+- **Evidence:** Real-database tests: the demo account can read every page's data, and each kind of write (create
+  order, archive item, set stock, cancel order) gets 403 and changes nothing. With the read-only rule removed, the
+  write test fails. Also checked on the local Docker stack. Backend 122 of 122 and frontend 52 of 52 passing.
+- **Commits:** `61ea280`, `2ccaf99`, `316f2ff`
 
 ---
 
