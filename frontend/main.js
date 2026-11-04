@@ -1,5 +1,28 @@
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, protocol, net } = require('electron')
 const path = require('path')
+const { pathToFileURL } = require('url')
+
+// Serve the packaged build from app://artifax instead of file:// so requests to the
+// API carry a real Origin the backend's CORS policy can allow (file:// sends "null").
+const APP_ORIGIN = 'app://artifax'
+const buildDir = path.join(__dirname, 'build')
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }
+])
+
+function registerAppProtocol() {
+  protocol.handle('app', (request) => {
+    const { pathname } = new URL(request.url)
+    const filePath = path.normalize(path.join(buildDir, decodeURIComponent(pathname)))
+
+    // Never serve anything outside the build folder
+    if (filePath !== buildDir && !filePath.startsWith(buildDir + path.sep)) {
+      return new Response('Not found', { status: 404 })
+    }
+    return net.fetch(pathToFileURL(filePath).toString())
+  })
+}
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -26,11 +49,12 @@ function createWindow() {
     });
   } else {
     // Load the static bundled files for the packaged production build
-    mainWindow.loadFile(path.join(__dirname, 'build', 'index.html'));
+    mainWindow.loadURL(`${APP_ORIGIN}/index.html`);
   }
 }
 
 app.whenReady().then(() => {
+  registerAppProtocol()
   createWindow()
 
   app.on('activate', () => {

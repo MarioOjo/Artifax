@@ -15,8 +15,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp",
         policy =>
         {
-                        // Replace with your actual React app's URL/Port
-                        policy.WithOrigins("http://localhost:3000", "http://localhost:3001", "http://localhost:5253") 
+                        // Local dev servers, plus app://artifax which the packaged Electron app is served from
+                        policy.WithOrigins("http://localhost:3000", "http://localhost:3001", "http://localhost:5253", "app://artifax")
                   .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
