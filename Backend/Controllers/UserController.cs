@@ -19,7 +19,8 @@ namespace Artifax.Controllers
         internal enum EmployeeLevels
         {
             Employee,
-            Admin
+            Admin,
+            Demo
         }
 
         readonly ArtifaxContext context;
@@ -31,24 +32,34 @@ namespace Artifax.Controllers
 
         bool isAdmin => HttpContext.Session.GetString("UserLevel") == EmployeeLevels.Admin.ToString();
 
+        // Non-admins (including the public demo account) only see their own email address
+        List<EmployeeReadDto> WithoutOtherEmails(List<EmployeeReadDto> employees)
+        {
+            if (isAdmin) return employees;
+            var ownEmail = HttpContext.Session.GetString("UserEmail");
+            foreach (var employee in employees.Where(e => e.EmployeeEmail != ownEmail))
+                employee.EmployeeEmail = null;
+            return employees;
+        }
+
         #region GetRoutes
         //Get All Employees
         [HttpGet]
         public async Task<ActionResult<IEnumerable<EmployeeReadDto>>> GetAllUsers()
         {
-            return await context.Employees.Where(employee => !employee.IsArchived).Select(employee => EmployeeReadDto.ToDto(employee)).ToListAsync();
+            return WithoutOtherEmails(await context.Employees.Where(employee => !employee.IsArchived).Select(employee => EmployeeReadDto.ToDto(employee)).ToListAsync());
         }
 
         [HttpGet("employees")]
         public async Task<ActionResult<IEnumerable<EmployeeReadDto>>> GetAllEmployees()
         {
-            return await context.Employees.Where(employee => !employee.IsArchived && employee.EmployeeLevel == EmployeeLevels.Employee.ToString()).Select(employee => EmployeeReadDto.ToDto(employee)).ToListAsync();
+            return WithoutOtherEmails(await context.Employees.Where(employee => !employee.IsArchived && employee.EmployeeLevel == EmployeeLevels.Employee.ToString()).Select(employee => EmployeeReadDto.ToDto(employee)).ToListAsync());
         }
 
         [HttpGet("admins")]
         public async Task<ActionResult<IEnumerable<EmployeeReadDto>>> GetAllAdmins()
         {
-            return await context.Employees.Where(employee => !employee.IsArchived && employee.EmployeeLevel == EmployeeLevels.Admin.ToString()).Select(employee => EmployeeReadDto.ToDto(employee)).ToListAsync();
+            return WithoutOtherEmails(await context.Employees.Where(employee => !employee.IsArchived && employee.EmployeeLevel == EmployeeLevels.Admin.ToString()).Select(employee => EmployeeReadDto.ToDto(employee)).ToListAsync());
         }
 
         //Get All Employee by Id
@@ -91,6 +102,10 @@ namespace Artifax.Controllers
             if (string.IsNullOrEmpty(pendingEmail)) return Unauthorized("No login session pending.");
 
             var employee = await context.Employees.FirstAsync(e => e.EmployeeEmail == pendingEmail);
+
+            // Otherwise anyone who learned the password could enrol their own authenticator, defeating 2FA
+            if (employee.TwoFactorConfirmed && employee.EmployeeLevel != EmployeeLevels.Demo.ToString())
+                return StatusCode(StatusCodes.Status403Forbidden, "Two-factor authentication is already set up for this account. Use your authenticator app.");
 
             // Instantiate the Google Authenticator engine
             var tfa = new TwoFactorAuthenticator();
@@ -205,6 +220,13 @@ namespace Artifax.Controllers
                 return Unauthorized("Invalid 2FA Verification Code");
             }
 
+            // The first successful code confirms the authenticator; the setup QR is not shown again
+            if (!_employee.TwoFactorConfirmed && _employee.EmployeeLevel != EmployeeLevels.Demo.ToString())
+            {
+                _employee.TwoFactorConfirmed = true;
+                await context.SaveChangesAsync();
+            }
+
             HttpContext.Session.Remove("Pending2FAEmail");
             HttpContext.Session.SetString("UserLevel", _employee.EmployeeLevel);
             HttpContext.Session.SetString("UserEmail", _employee.EmployeeEmail);
@@ -280,6 +302,25 @@ namespace Artifax.Controllers
 
         #region DeleteRoutes
         // Permanently removes an employee from the system.
+
+        // Admin only: clears a user's two-factor setup (e.g. a lost phone). Their next sign-in generates a new
+        // secret and shows the setup QR code again.
+        [HttpPatch("employee/reset-2fa")]
+        public async Task<IActionResult> ResetTwoFactor(int id)
+        {
+            if (!isAdmin)
+            {
+                return Unauthorized("2FA reset attempted by non-admin!");
+            }
+
+            var _employee = await context.Employees.FindAsync(id);
+            if (_employee == null) return NotFound($"Employee with ID: {id} could not be found");
+
+            _employee.TwoFactorSecret = null;
+            _employee.TwoFactorConfirmed = false;
+            await context.SaveChangesAsync();
+            return NoContent();
+        }
 
         [HttpDelete("employee")]
         public async Task<IActionResult> DeleteEmployee(int id)

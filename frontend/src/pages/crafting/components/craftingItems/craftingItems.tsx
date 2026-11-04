@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState } from 'react';
+import React, { FC, useCallback, useEffect, useState } from 'react';
 import './craftingItems.css';
 import unitIcon from '../../../../assets/images/uniitIcon.png';
 import unitIconWhite from '../../../../assets/images/uniitIconWhite.png';
@@ -65,11 +65,10 @@ const CraftingItems: FC = () => {
   const currentUser = useCurrentUser();
   const [tilts, setTilts] = useState<TiltsState>({});
   const [activeJobs, setActiveJobs] = useState<CraftingJob[]>([]);
-  const [branchMap, setBranchMap] = useState<Record<number, string>>({});
 
   const ORDER_REFRESH_INTERVAL_MS = 60_000;
 
-  const loadActiveJobs = async (): Promise<void> => {
+  const loadActiveJobs = useCallback(async (): Promise<void> => {
     try {
       const [ordersResponse, usersResponse, branchesResponse] = await Promise.all([
         api.get<OrderDto[]>('/Order'),
@@ -85,8 +84,6 @@ const CraftingItems: FC = () => {
         }
         return map;
       }, {});
-
-      setBranchMap(branchMapFromApi);
 
       const employees = (usersResponse.data as EmployeeDto[]).reduce<Record<number, string>>((map, user) => {
         if (user.employeeId != null) {
@@ -169,7 +166,7 @@ const CraftingItems: FC = () => {
     } catch (error) {
       console.error('Unable to load crafting items orders', error);
     }
-  };
+  }, [api, currentUser]);
 
   useEffect(() => {
     let isMounted = true;
@@ -198,7 +195,7 @@ const CraftingItems: FC = () => {
       }
       window.removeEventListener('crafting-order-updated', handleOrderUpdated);
     };
-}, [api, currentUser]);
+}, [loadActiveJobs]);
 
   const unitIconSrc = useThemeAwareIcon(unitIcon, unitIconWhite);
 

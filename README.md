@@ -32,7 +32,15 @@ Download the **`Artifax-<version>-Setup.exe`** asset and run it. Artifax install
 The installer is not code-signed, so Windows SmartScreen may show a warning. Choose **More info → Run anyway**.
 
 ### Step 4:
-Sign in with an account created by an administrator, then set up two-factor authentication with an authenticator app. The API runs on a free tier that sleeps when idle, so the first sign-in after a quiet spell can take up to a minute.
+Sign in. To explore without an account, use the **read-only demo account**:
+
+| Email | Password |
+| --- | --- |
+| `demo@artifax.local` | `ArtifaxDemo1` |
+
+On the verification screen, choose **First time?**, scan the QR code with an authenticator app (Google Authenticator, Microsoft Authenticator, Authy...) and enter the 6-digit code. The demo account can view everything, but changes are disabled.
+
+The API runs on a free tier that sleeps when idle, so the first sign-in after a quiet spell can take up to a minute.
 
 > This repository continues the original team project. See [Portfolio changes](docs/PORTFOLIO-CHANGES.md) for everything changed since the team's final version.
 
@@ -140,7 +148,7 @@ REACT_APP_API_BASE=http://localhost:8080 npm run web   # React dev server on htt
 npm start                        # optional, in a second terminal: the Electron window, loading the dev server
 ```
 
-Open http://localhost:3000 in a browser, or use the Electron window. Sign in as `admin@artifax.local` / `ArtifaxDev1`, then set up 2FA with an authenticator app. Because this is a separate local account, it gets its own authenticator entry. `docker compose down -v` wipes the local database, and the next start seeds it again.
+Open http://localhost:3000 in a browser, or use the Electron window. Sign in as `admin@artifax.local` / `ArtifaxDev1`, or as the read-only `demo@artifax.local` / `ArtifaxDemo1`, then set up 2FA with an authenticator app. These local accounts get their own authenticator entries. `docker compose down -v` wipes the local database, and the next start seeds it again.
 
 Tests:
 
@@ -152,17 +160,29 @@ cd frontend && npm test
 
 ## Test Coverage
 
-### Frontend
-
-We implemented unit and integration testing to verify our frontend code, which resulted in 17 passed and 4 failed test suites out of 21 total, and 35 passed and 4 failed individual tests out of 39 total as shown in image. The 4 failing tests belong to features that are still in production, so they are expected to fail until that development wraps up. 
-
-As seen in image, our current code coverage metrics are 57.39% for Statements, 43.63% for Branches, 56.41% for Functions, and 57.9% for Lines, with the uncovered pages currently being fixed and refactored. For the core features that are completely finished like the components tested in BlueprintPanel.test.tsx, CraftingQueue.test.tsx, and NewBlueprint.test.tsx, the tests thoroughly check that data loads correctly from the backend, form buttons lock when inputs are missing and errors are handled safely. 
+All tests pass: **116 backend** and **49 frontend**. When the project was handed over, 4 backend and 27 frontend
+tests were failing. See [Portfolio changes](docs/PORTFOLIO-CHANGES.md#213-out-of-date-tests).
 
 ### Backend
+- **Unit tests** (xUnit, EF Core in-memory database, Moq) exercise the controllers directly: CRUD, validation,
+  status codes and DTO mapping.
+- **Real-database tests** (31 of the 116) use [Testcontainers](https://testcontainers.com/) to start a throwaway
+  PostgreSQL in Docker. They cover behaviour the in-memory database cannot show:
+  - authorization through the full HTTP pipeline;
+  - foreign keys and `ON DELETE RESTRICT`;
+  - stock taken and returned in one transaction;
+  - concurrent orders being unable to oversell stock.
+- **Regression tests** cover the bugs fixed after hand-over. Each fails on the old code and passes on the new.
+- **Coverage:** 58.7% of lines, excluding generated migration code, and 70.3% across controllers, services and
+  authentication.
 
-We wrote unit tests throughout the backend on the majority of our controllers that test the functions we use on our endpoints in isolation. Our test suite was built using xUnit and we used both EF’ In-Memory Database and Moq to run our testing. Our total line coverage is only about 30%, but that number is being dropped significantly by files made by Entity Framework Core and Dotnet. We have especially high coverage on all of our controllers. We wrote 77 tests in total, all passed. Every test we wrote follows the Arrange Act Assert pattern to ensure readability and predictability. The tests primarily validated the Controllers.
+### Frontend
+- Jest and React Testing Library tests for every page and the main components. They mock the shared API client and
+  check that data loads, filters and forms behave, and that server errors (for example, crafting shortages) are
+  shown.
+- **Coverage:** 57.1% of lines (statements 56.8%, branches 43.5%, functions 57.8%).
 
-This included verifying standard CRUD operations, complex relational updates, and ensuring the API returned the correct HTTP status codes for both working results and bad results. These metrics strongly reflect a robust test suite because the coverage wasn't just superficial. The tests thoroughly explored various execution paths, ensuring that our application correctly manipulates the database state (verifying item counts and property changes post-execution) and accurately maps Data Transfer Objects.
+Commands are under [Running locally](#running-locally). The real-database tests need Docker.
 
 ### Technologies
 ![Jest](https://img.shields.io/badge/-jest-%23C21325?style=for-the-badge&logo=jest&logoColor=white)
@@ -170,10 +190,13 @@ This included verifying standard CRUD operations, complex relational updates, an
 ![xUnit](https://img.shields.io/badge/xUnit-5C2D91?style=for-the-badge&logo=.net&logoColor=white)
 ![Swagger](https://img.shields.io/badge/-Swagger-%23Clojure?style=for-the-badge&logo=swagger&logoColor=white)
 ![Insomnia](https://img.shields.io/badge/Insomnia-black?style=for-the-badge&logo=insomnia&logoColor=5849BE)
+![Testcontainers](https://img.shields.io/badge/Testcontainers-291A3F?style=for-the-badge&logo=testcontainers&logoColor=white)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 
 In terms of testing we employed a suite of technologies in order to engage in various forms of both manual and automatic. This includes:
 - Jest and xUnit for automated testing of our frontend and backend applications. These two technologies were also built in additions to react and dotnet.
 - Swagger and Insomnia for manual testing of backend during early to mid and later development accordingly.
+- Testcontainers and Docker for the backend tests that run against a real PostgreSQL database.
 
 ## Technologies used
 

@@ -78,7 +78,7 @@ const StatsGrid: FC = () => {
         icon: <img src={blockedIconSrc} alt="Cancelled" />,
       },
     ],
-    [recipeCount, activeJobs, completedJobs, cancelledJobs],
+    [recipeCount, activeJobs, completedJobs, cancelledJobs, recipeIconSrc, activeJobsIconSrc, completedIconSrc, blockedIconSrc],
   );
 
   const [tilts, setTilts] = useState<TiltsState>({});

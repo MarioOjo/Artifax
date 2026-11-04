@@ -9,6 +9,8 @@ namespace Artifax.Models
         public int BranchId { get; set; }
         public string EmployeeLevel { get; set; }
         public string? TwoFactorSecret { get; set; }
+        // Set after the first successful 2FA sign-in; from then on the setup QR code is no longer shown
+        public bool TwoFactorConfirmed { get; set; }
         // Archived instead of deleted, so orders and their history keep referring to it
         public bool IsArchived { get; set; }
         public Branch? Branch { get; set; }

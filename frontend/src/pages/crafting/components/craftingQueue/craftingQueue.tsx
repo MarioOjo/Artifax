@@ -56,7 +56,6 @@ const CraftingQueue: FC = () => {
   const [page, setPage] = useState<number>(1);
   const [activeJobs, setActiveJobs] = useState<CraftingJob[]>([]);
   const [queuedJobs, setQueuedJobs] = useState<CraftingJob[]>([]);
-  const [branchMap, setBranchMap] = useState<Record<number, string>>({});
 
   const unitIconSrc = useThemeAwareIcon(unitIcon, unitIconWhite);
 
@@ -81,8 +80,6 @@ const CraftingQueue: FC = () => {
           }
           return map;
         }, {});
-
-        setBranchMap(branchMapFromApi);
 
         const employees = (userResponse.data as EmployeeDto[]).reduce<Record<number, string>>((map, user) => {
           if (user.employeeId != null) {

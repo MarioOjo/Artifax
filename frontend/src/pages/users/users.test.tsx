@@ -142,4 +142,17 @@ describe('Users page', () => {
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/User/employee?id=2'));
     confirmSpy.mockRestore();
   });
+
+  it('resets two-factor authentication for a user after confirmation', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    api.patch.mockResolvedValue({});
+    render(<Users />);
+
+    await waitFor(() => screen.getByText(/Employee Two/i));
+    fireEvent.click(screen.getByText(/Employee Two/i));
+    fireEvent.click(await screen.findByRole('button', { name: /Reset 2FA/i }));
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/User/employee/reset-2fa?id=2'));
+    confirmSpy.mockRestore();
+  });
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PageHeader from '../../components/layout/PageHeader';
 import CraeteUsersPage from './componets/craeteUser/craeteusers';
 import UserList from './componets/userList/UserList';
@@ -40,7 +40,7 @@ const Users: React.FC = () => {
     setSelectedUserId(null);
   };
 
-  const fetchUsers = async (): Promise<User[]> => {
+  const fetchUsers = useCallback(async (): Promise<User[]> => {
     setLoading(true);
     try {
       const [adminsResp, employeesResp, branchesResp] = await Promise.all([
@@ -86,7 +86,7 @@ const Users: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [api]);
 
   const handleSaveUser = async (user: Omit<User, 'id'> & { id: number | null; password?: string }) => {
     try {
@@ -195,6 +195,22 @@ const Users: React.FC = () => {
     }
   };
 
+  // For a user who lost their authenticator: their next sign-in shows a new setup QR code
+  const handleResetTwoFactor = async (id: number) => {
+    const confirmed = window.confirm("Reset this user's two-factor authentication? Their next sign-in will show a new QR code to scan.");
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await api.patch(`/User/employee/reset-2fa?id=${encodeURIComponent(String(id))}`);
+      showSuccess('Two-factor authentication reset. The user will set it up again at their next sign-in.');
+    } catch (err) {
+      console.error('Reset 2FA failed', err);
+      showError('Unable to reset two-factor authentication. Please try again.');
+    }
+  };
+
   const handleRequestEdit = async (id: number) => {
     try {
       // Refresh users/branches from backend to ensure latest state before editing.
@@ -210,11 +226,9 @@ const Users: React.FC = () => {
     let mounted = true;
     if (usersFetchedRef.current) return; // already attempted fetch
     usersFetchedRef.current = true;
-    let timedOut = false;
     const timeoutId = setTimeout(() => {
       if (!mounted) return;
       console.error('Fetch users timed out');
-      timedOut = true;
       setLoading(false);
     }, 4000);
 
@@ -230,7 +244,7 @@ const Users: React.FC = () => {
     })();
 
     return () => { mounted = false; clearTimeout(timeoutId); };
-  }, []);
+  }, [fetchUsers]);
 
   return (
     <div className="page-content">
@@ -247,6 +261,7 @@ const Users: React.FC = () => {
               onSave={handleSaveUser}
               onDelete={handleDeleteUser}
               onRequestEdit={handleRequestEdit}
+              onResetTwoFactor={handleResetTwoFactor}
             />
           </div>
           <div className="users-panel">
