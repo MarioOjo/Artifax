@@ -371,14 +371,14 @@ const Crafting: FC = () => {
     }
 
     const itemId = parseInt(selectedBlueprintId.replace('bp-', ''));
-    const confirmed = window.confirm('Delete this blueprint and item? This cannot be undone.');
+    const confirmed = window.confirm('Remove this blueprint? The item is archived: it disappears from inventory and crafting, but past orders and their history are kept.');
     if (!confirmed) {
       return;
     }
 
     try {
       await api.delete(`/Item/${itemId}`);
-      showSuccess('Blueprint deleted successfully.');
+      showSuccess('Blueprint removed. Past orders keep their history.');
       setSelectedBlueprint(null);
       setSelectedBlueprintId('');
       setAmount(1);

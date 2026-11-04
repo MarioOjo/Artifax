@@ -117,4 +117,29 @@ describe('Users page', () => {
       expect(screen.getByRole('button', { name: /Edit/i })).toBeInTheDocument();
     });
   });
+
+  it('asks for confirmation before removing a user, and does nothing when cancelled', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<Users />);
+
+    await waitFor(() => screen.getByText(/Employee Two/i));
+    fireEvent.click(screen.getByText(/Employee Two/i));
+    fireEvent.click(await screen.findByRole('button', { name: /Delete User/i }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/history are kept/i));
+    expect(api.delete).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('removes the user once confirmed', async () => {
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+    render(<Users />);
+
+    await waitFor(() => screen.getByText(/Employee Two/i));
+    fireEvent.click(screen.getByText(/Employee Two/i));
+    fireEvent.click(await screen.findByRole('button', { name: /Delete User/i }));
+
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/User/employee?id=2'));
+    confirmSpy.mockRestore();
+  });
 });
