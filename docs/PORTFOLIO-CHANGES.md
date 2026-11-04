@@ -270,6 +270,33 @@ need design changes rather than small fixes:
   it is connected to the test container, not the hosted database. Backend: 102 of 102 passing.
 - **Commits:** `086ddee`, `239040f`
 
+### 3.3 Deletes keep history
+- **Problem:** Every relationship cascaded on delete.
+  - Deleting an item also deleted its orders, their history, its stock and its line in other products' recipes.
+  - Deleting an employee deleted every order they had placed.
+  - Deleting a branch deleted its employees, stock and orders.
+  - Removing a user happened on a single click, with no confirmation.
+- **Change:**
+  - Items, employees and branches are **archived** instead of deleted. They leave every list, but orders still
+    refer to them, so history keeps its names.
+  - Archived records cannot be ordered with, and an archived employee cannot sign in.
+  - The database enforces it too: orders' links to items, employees and branches, employees' link to their branch,
+    and recipe lines' link to their ingredient are now `ON DELETE RESTRICT`, so even a direct delete cannot wipe
+    history.
+  - Removing a user asks for confirmation, and messages describe what is kept.
+- **Design note:** Archived records are filtered where lists are built rather than with EF global query filters.
+  Global filters would hide an archived item from its own orders' history.
+- **Evidence:** Real-database tests against the demo data:
+  - deleting an item keeps its orders and history, and hides it from lists;
+  - deleting an ingredient leaves other recipes intact;
+  - an archived item cannot be ordered;
+  - deleting an employee keeps their orders and stops them signing in;
+  - the database rejects a direct delete of an item with orders (`23001 restrict_violation`).
+
+  With the old hard delete restored, the three item tests fail. Backend 107 of 107 and frontend 47 of 47 passing.
+- **Deploy note:** Apply the `ArchiveInsteadOfDelete` migration to the hosted database before deploying this code.
+- **Commits:** `85d93cc`, `091f831`, `cbccae8`
+
 ---
 
 ## 4. Known issues
