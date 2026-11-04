@@ -124,6 +124,15 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Public status check. Always 200 while the API runs; the database is reported separately so that a
+// sleeping database does not make the host restart a healthy API. Render sets RENDER_GIT_COMMIT on deploy.
+app.MapGet("/health", async (ArtifaxContext db, IConfiguration config) => Results.Ok(new
+{
+    status = "ok",
+    version = config["RENDER_GIT_COMMIT"] ?? config["GIT_COMMIT"] ?? "unknown",
+    database = await db.Database.CanConnectAsync() ? "ok" : "unavailable",
+})).AllowAnonymous();
+
 app.Run();
 
 // Exposed for WebApplicationFactory<Program> in Backend.Tests
