@@ -297,6 +297,34 @@ need design changes rather than small fixes:
 - **Deploy note:** Apply the `ArchiveInsteadOfDelete` migration to the hosted database before deploying this code.
 - **Commits:** `85d93cc`, `091f831`, `cbccae8`
 
+### 3.4 Crafting takes and returns stock on the server
+- **Problem:** The app created the order, then in separate requests read and overwrote each material's stock,
+  clamping at zero.
+  - The server never checked stock.
+  - A failed stock update left the order in place.
+  - Two people crafting at once could spend the same stock.
+  - Cancelling an order never returned anything.
+- **Change:**
+  - Placing an order reads the recipe, checks the branch has every material, deducts them and saves the order in
+    one `SaveChanges`, which is one transaction. A shortage returns 409 listing what is missing, and nothing
+    changes.
+  - Stock rows carry a row version (PostgreSQL `xmin`). If another request changed a stock row first, the save is
+    rejected instead of overwriting it.
+  - The materials each order took are recorded in a new `OrderMaterials` table. Cancelling or deleting an
+    unfinished order returns exactly those amounts, even if the recipe changed since, and only once.
+  - Changing an order's item, quantity or branch returns its old materials to the original branch and takes the
+    new amounts.
+  - The craft button no longer touches stock itself, and shows the server's shortage details.
+- **Evidence:** Real-database tests through the API cover each behaviour above: materials taken and recorded;
+  shortages changing nothing, even for the materials that would have fitted; a single refund on cancel; refunds
+  surviving a recipe change; quantity changes; deletes; concurrent orders; and a lost update being rejected. With
+  the row version removed, the two concurrency tests fail in 3 of 3 runs. Also checked end to end on the local Docker
+  stack: 3 brackets took 6 Steel Sheets (120 → 114), cancelling returned them, and an order for 500 was refused.
+  Backend 115 of 115 and frontend 49 of 49 passing.
+- **Limitation:** Orders placed before this change have no recorded materials, so cancelling one returns nothing.
+- **Deploy note:** Apply the `RecordOrderMaterials` migration to the hosted database before deploying this code.
+- **Commits:** `5659517`, `f64bf99`, `2ea05f6`
+
 ---
 
 ## 4. Known issues
