@@ -37,7 +37,7 @@ describe('CraftPanel', () => {
 
     expect(screen.getByText(/Test Blueprint/i)).toBeInTheDocument();
     expect(screen.getByText(/Craft Amount/i)).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('1')).toBeInTheDocument();
     expect(screen.getByText(/2\s*\/\s*1/)).toBeInTheDocument();
     expect(screen.getByText(/Insufficient quantity/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Craft Item/i })).toBeDisabled();

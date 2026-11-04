@@ -6,6 +6,7 @@ import { showSuccess, showError } from '../../../../utils/toast';
 
 jest.mock('../../../../hooks', () => ({
   useApi: jest.fn(),
+  useThemeAwareIcon: (icon: string) => icon,
 }));
 jest.mock('../../../../utils/toast', () => ({
   showSuccess: jest.fn(),

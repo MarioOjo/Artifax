@@ -1,6 +1,38 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Crafting from './crafting';
+import { useApi } from '../../hooks';
+import { getInventoryOverview } from '../../services/inventoryApi';
+
+jest.mock('../../hooks', () => ({
+  useApi: jest.fn(),
+  useThemeAwareIcon: (icon: string) => icon,
+}));
+
+jest.mock('../../services/inventoryApi', () => ({
+  getInventoryOverview: jest.fn(),
+}));
+
+const mockedUseApi = useApi as jest.MockedFunction<typeof useApi>;
+
+// Responses for the calls the page makes when a blueprint is selected
+const apiResponses: Record<string, unknown> = {
+  '/Item/item/101': { itemID: 101, itemName: 'Round Table', productionTime: 20, itemCategory: 'furniture' },
+  '/Item/itemIngredient/item/101': [
+    { ingredientID: 201, itemName: 'Iron Ingot', quantity: 10 },
+    { ingredientID: 202, itemName: 'Bolt Set (M8)', quantity: 20 },
+  ],
+  '/Item/item': [
+    { itemID: 101, itemName: 'Round Table' },
+    { itemID: 201, itemName: 'Iron Ingot' },
+    { itemID: 202, itemName: 'Bolt Set (M8)' },
+  ],
+  '/Item/Branch': [
+    { itemID: 101, itemQuantity: 5 },
+    { itemID: 201, itemQuantity: 142 },
+    { itemID: 202, itemQuantity: 520 },
+  ],
+};
 
 jest.mock('../../components/layout/AlertStrip', () => ({
   __esModule: true,
@@ -89,16 +121,10 @@ jest.mock('./components/newBlueprint/newBlueprint', () => ({
 
 describe('Crafting page', () => {
   beforeEach(() => {
-    (global.fetch as any) = jest.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ itemID: 101, itemName: 'Round Table', productionTime: 20, itemCategory: 'furniture' }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ([{ itemName: 'Iron Ingot', quantity: 10 }, { itemName: 'Bolt Set (M8)', quantity: 20 }]) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ([{ itemID: 101, itemName: 'Round Table' }, { itemID: 201, itemName: 'Iron Ingot' }, { itemID: 202, itemName: 'Bolt Set (M8)' }]) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ([{ itemID: 101, itemQuantity: 5 }, { itemID: 201, itemQuantity: 142 }, { itemID: 202, itemQuantity: 520 }]) });
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-    delete (global as any).fetch;
+    const get = jest.fn((url: string) =>
+      url in apiResponses ? Promise.resolve({ data: apiResponses[url] }) : Promise.reject(new Error(`Unexpected GET ${url}`)));
+    mockedUseApi.mockReturnValue({ get, post: jest.fn(), put: jest.fn(), delete: jest.fn() } as any);
+    (getInventoryOverview as jest.Mock).mockResolvedValue({ alerts: [] });
   });
 
   it('renders crafting page and switches between tabs', async () => {

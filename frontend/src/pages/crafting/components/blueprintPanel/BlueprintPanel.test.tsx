@@ -6,6 +6,7 @@ import { useApi } from '../../../../hooks';
 
 jest.mock('../../../../hooks', () => ({
   useApi: jest.fn(),
+  useThemeAwareIcon: (icon: string) => icon,
 }));
 
 const mockBlueprintsResponse = [
@@ -15,7 +16,7 @@ const mockBlueprintsResponse = [
     itemCategory: 'metal',
     productionTime: 10,
     ingredients: [
-      { itemName: 'Iron Ingot', quantity: 2 }
+      { ingredientID: 101, itemName: 'Iron Ingot', quantity: 2 }
     ]
   },
   {
