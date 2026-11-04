@@ -15,6 +15,7 @@ interface OrderHistoryDto {
   completedDateTime?: string | null;
   createdDateTime?: string | null;
   status: string;
+  employeeID?: number;
   employeeName?: string;
 }
 
@@ -67,12 +68,24 @@ const HistoryPanel: FC = () => {
   useEffect(() => {
     const loadHistory = async (): Promise<void> => {
       try {
-        const response = await api.get<OrderHistoryDto[]>('/Order');
-        const allOrders = response.data || [];
-        const historyOrders = allOrders.filter((o) => {
-          const s = (o.status || '').toLowerCase();
-          return s === 'complete' || s === 'completed' || s === 'cancelled' || s === 'canceled';
-        });
+        const [ordersResponse, usersResponse] = await Promise.all([
+          api.get<OrderHistoryDto[]>('/Order'),
+          api.get<Array<{ employeeId: number; employeeName: string }>>('/User'),
+        ]);
+        const allOrders = ordersResponse.data || [];
+
+        // /Order returns only the employee ID, so names come from /User
+        const employeeNames = (usersResponse.data || []).reduce<Record<number, string>>((map, user) => {
+          map[user.employeeId] = user.employeeName;
+          return map;
+        }, {});
+
+        const historyOrders = allOrders
+          .filter((o) => {
+            const s = (o.status || '').toLowerCase();
+            return s === 'complete' || s === 'completed' || s === 'cancelled' || s === 'canceled';
+          })
+          .map((o) => ({ ...o, employeeName: o.employeeName ?? employeeNames[o.employeeID ?? 0] }));
         setHistoryData(historyOrders);
       } catch (error) {
         console.error('Failed to load order history', error);
