@@ -132,11 +132,15 @@ The backend and a PostgreSQL database run in Docker, so local work never touches
 
 ```bash
 docker compose up --build        # API on http://localhost:8080 (Swagger at /swagger), seeded with demo data
+
 cd frontend && npm install
-REACT_APP_API_BASE=http://localhost:8080 npm start   # PowerShell: $env:REACT_APP_API_BASE="http://localhost:8080"; npm start
+REACT_APP_API_BASE=http://localhost:8080 npm run web   # React dev server on http://localhost:3000
+# PowerShell: $env:REACT_APP_API_BASE="http://localhost:8080"; npm run web
+
+npm start                        # optional, in a second terminal: the Electron window, loading the dev server
 ```
 
-Sign in as `admin@artifax.local` / `ArtifaxDev1`, then set up 2FA with an authenticator app. `docker compose down -v` wipes the local database, and the next start seeds it again.
+Open http://localhost:3000 in a browser, or use the Electron window. Sign in as `admin@artifax.local` / `ArtifaxDev1`, then set up 2FA with an authenticator app. Because this is a separate local account, it gets its own authenticator entry. `docker compose down -v` wipes the local database, and the next start seeds it again.
 
 Tests:
 

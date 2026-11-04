@@ -51,8 +51,9 @@ function createWindow() {
   if (isDev) {
     // Load the live development server with hot-reloading active
     mainWindow.loadURL(devServerUrl).catch(() => {
-      console.log("Failed to connect to dev server, falling back to build file.");
-      mainWindow.loadFile(path.join(__dirname, 'build', 'index.html'));
+      console.log("Failed to connect to dev server (start it with `npm run web`), falling back to build/.");
+      // Same app:// origin as the packaged app; file:// would send Origin "null", which the API rejects
+      mainWindow.loadURL(`${APP_ORIGIN}/index.html`);
     });
   } else {
     // Load the static bundled files for the packaged production build
