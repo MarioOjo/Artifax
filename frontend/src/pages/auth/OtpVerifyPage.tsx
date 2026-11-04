@@ -137,7 +137,7 @@ function OtpVerifyPage() {
         employeeId = employeeDetails.employeeId;
         branchId = employeeDetails.branchId;
         const branches = await getBranches();
-        branchName = branches.find((branch) => branch.BranchID === branchId)?.BranchName;
+        branchName = branches.find((branch) => branch.branchID === branchId)?.branchName;
       } catch (branchError) {
         branchName = undefined;
       }

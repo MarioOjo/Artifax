@@ -65,7 +65,7 @@ function Topbar() {
           return;
         }
 
-        const resolvedName = branch.BranchName ?? (branch as any).branchName;
+        const resolvedName = branch.branchName;
         if (resolvedName) {
           setBranchName(resolvedName);
         }

@@ -30,9 +30,10 @@ export type EmployeeDetailsResponse = {
   employeeLevel?: string;
 };
 
+// The API serialises JSON in camelCase
 export type BranchDto = {
-  BranchID: number;
-  BranchName: string;
+  branchID: number;
+  branchName: string;
 };
 
 async function withAxios<T>(request: Promise<AxiosResponse<T>>): Promise<T> {

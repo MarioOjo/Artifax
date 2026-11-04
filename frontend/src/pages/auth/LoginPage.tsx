@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import './LoginPage.css';
 import { setCurrentUser } from '../../utils/currentUser';
 import { clearAuthToken, setAuthToken } from '../../utils/authToken';
-import {  getEmployeeByEmail, getBranches, loginEmployee, getCurrentUserFromSession } from '../../services/authApi';
+import {  getEmployeeByEmail, loginEmployee, getCurrentUserFromSession } from '../../services/authApi';
 
 function LoginPage() {
   const navigate = useNavigate();
