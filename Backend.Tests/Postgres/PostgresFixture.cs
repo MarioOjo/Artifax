@@ -18,16 +18,19 @@ namespace Backend.Tests.Postgres
 
         public Task DisposeAsync() => _container.DisposeAsync().AsTask();
 
+        public string ContainerHost => _container.Hostname;
+
+        // A connection string for a new, not yet created database on the test server
+        public string NewDatabaseConnectionString() => new NpgsqlConnectionStringBuilder(_container.GetConnectionString())
+        {
+            Database = $"test_{Guid.NewGuid():N}"
+        }.ConnectionString;
+
         // Each call gets its own freshly migrated database, so tests cannot affect each other
         public ArtifaxContext CreateMigratedContext()
         {
-            var connectionString = new NpgsqlConnectionStringBuilder(_container.GetConnectionString())
-            {
-                Database = $"test_{Guid.NewGuid():N}"
-            }.ConnectionString;
-
             var options = new DbContextOptionsBuilder<ArtifaxContext>()
-                .UseNpgsql(connectionString)
+                .UseNpgsql(NewDatabaseConnectionString())
                 .Options;
 
             var context = new ArtifaxContext(options);
