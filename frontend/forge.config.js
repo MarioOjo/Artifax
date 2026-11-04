@@ -1,13 +1,24 @@
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
+// The packaged app only needs the Electron entry point, the React production build and the one
+// runtime package main.js requires. Everything else in package.json (react-scripts, TypeScript,
+// Tailwind, testing libraries...) is build-time only and used to be bundled into the installer.
+const PACKAGED_PATHS = ['/package.json', '/main.js', '/build', '/node_modules/electron-squirrel-startup'];
+
+const isPackaged = (filePath) => {
+  const normalized = filePath.replace(/\\/g, '/');
+  if (normalized === '' || normalized === '/node_modules') return true;
+  return PACKAGED_PATHS.some((allowed) => normalized === allowed || normalized.startsWith(`${allowed}/`));
+};
+
 module.exports = {
   // Redirects the build output away from OneDrive to prevent EBUSY locks
   outDir: 'C:/ElectronBuilds/Artifax',
   packagerConfig: {
     asar: true,
     buildDebounce: 2000,
-    
+    ignore: (filePath) => !isPackaged(filePath),
   },
   rebuildConfig: {},
   makers: [

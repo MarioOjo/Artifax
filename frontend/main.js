@@ -2,6 +2,12 @@ const { app, BrowserWindow, protocol, net } = require('electron')
 const path = require('path')
 const { pathToFileURL } = require('url')
 
+// The Windows (Squirrel) installer runs the app with --squirrel-* flags on install, update and
+// uninstall so it can create or remove shortcuts; quit straight away instead of opening a window.
+if (require('electron-squirrel-startup')) {
+  app.quit()
+}
+
 // Serve the packaged build from app://artifax instead of file:// so requests to the
 // API carry a real Origin the backend's CORS policy can allow (file:// sends "null").
 const APP_ORIGIN = 'app://artifax'
@@ -28,7 +34,8 @@ function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 1200, // Slightly wider to accommodate DevTools neatly
     height: 800,
-    icon: path.join(__dirname, './public/artifax-logo.png'),
+    // build/ holds a copy of public/ and is the folder that ships with the packaged app
+    icon: path.join(buildDir, 'artifax-logo.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
