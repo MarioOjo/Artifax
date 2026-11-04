@@ -33,7 +33,7 @@ function OtpVerifyPage() {
         setQrUri(_data.qrCodeUri);
       }
     } catch (error) {
-      console.log(error);
+      console.error('Failed to load 2FA setup code', error);
     }
   }
 
@@ -156,7 +156,7 @@ function OtpVerifyPage() {
 
     } catch (err) {
       // 🌟 FAILURE: Switch status view inside the component
-      console.log(err);
+      console.error('2FA verification failed', err);
       // Surface the server's reason (e.g. "Session expired." vs "Invalid 2FA Verification Code")
       setErrorMessage(err instanceof Error ? err.message : '');
       setStatus('failed');

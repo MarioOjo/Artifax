@@ -71,12 +71,10 @@ function Sidebar() {
     (async () => {
       try {
         const me = await getCurrentUserFromSession();
-        console.log('Sidebar /User/me response:', me);
         if (mounted) {
           setSessionUser(me);
         }
       } catch (error) {
-        console.log('Sidebar /User/me failed:', error);
         // Ignore errors and fall back to stored user data if available.
       }
     })();

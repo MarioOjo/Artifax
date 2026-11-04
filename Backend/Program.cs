@@ -33,7 +33,6 @@ builder.Services.AddOpenApi();
 
 // Prefer configured connection string (appsettings/user-secrets), then fall back to DATABASE_* vars.
 var connectionString = builder.Configuration.GetConnectionString("ArtifaxDatabase");
-Console.WriteLine($"[CRITICAL DEBUG] String starts with: '{connectionString?.Substring(0, Math.Min(connectionString?.Length ?? 0, 10))}'");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
@@ -51,8 +50,6 @@ if (string.IsNullOrWhiteSpace(connectionString) || connectionString.Contains("Ho
     throw new InvalidOperationException(
         "Database connection is not configured. Set ConnectionStrings:ArtifaxDatabase (user-secrets) or DATABASE_* environment variables.");
 }
-
-// (debug prefix removed)
 
 builder.Services.AddDbContext<ArtifaxContext>(options => options.UseNpgsql(connectionString));
 
