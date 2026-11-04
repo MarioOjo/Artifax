@@ -5,6 +5,8 @@ namespace Artifax.Models
     {
         public int BranchID { get; set; }
         public string BranchName { get; set; }
+        // Archived instead of deleted, so orders and their history keep referring to it
+        public bool IsArchived { get; set; }
 
         // Only keep the relationships that exist in the new system
         public ICollection<Order> Orders { get; set; } = new List<Order>();

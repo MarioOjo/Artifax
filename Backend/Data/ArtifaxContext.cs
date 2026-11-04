@@ -16,19 +16,22 @@ namespace Artifax.Data
         public DbSet<Item> Items { get; set; }
         public DbSet<ItemIngredient> ItemIngredients { get; set; }
         public DbSet<BranchItemCapacity> BranchItemCapacities { get; set; }
+        public DbSet<OrderMaterial> OrderMaterials { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             // 1. Existing Group Relationships (DO NOT REMOVE)
             modelBuilder.Entity<Branch>().HasMany(b => b.BranchItemCapacities).WithOne(bic => bic.Branch).HasForeignKey(bic => bic.BranchID);
             modelBuilder.Entity<Item>().HasMany(i => i.BranchItemCapacities).WithOne(bic => bic.Item).HasForeignKey(bic => bic.ItemID);
-            modelBuilder.Entity<Item>().HasMany(i => i.IngredientItemIngredients).WithOne(ig => ig.IngredientItem).HasForeignKey(ig => ig.IngredientID);
+            // Restrict: removing an ingredient item must not silently strip it from other products' recipes
+            modelBuilder.Entity<Item>().HasMany(i => i.IngredientItemIngredients).WithOne(ig => ig.IngredientItem).HasForeignKey(ig => ig.IngredientID).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<Item>().HasMany(i => i.ProductItemIngredients).WithOne(ig => ig.ProductItem).HasForeignKey(ig => ig.ProductID);
-            modelBuilder.Entity<Branch>().HasMany(b => b.Employees).WithOne(e => e.Branch).HasForeignKey(e => e.BranchId);
-            modelBuilder.Entity<Branch>().HasMany(b => b.Orders).WithOne(o => o.Branch).HasForeignKey(o => o.BranchID);
+            modelBuilder.Entity<Branch>().HasMany(b => b.Employees).WithOne(e => e.Branch).HasForeignKey(e => e.BranchId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Branch>().HasMany(b => b.Orders).WithOne(o => o.Branch).HasForeignKey(o => o.BranchID).OnDelete(DeleteBehavior.Restrict);
             
-            // Order relationships
-            modelBuilder.Entity<Order>().HasOne(o => o.Item).WithMany().HasForeignKey(o => o.ItemID);
-            modelBuilder.Entity<Order>().HasOne(o => o.Employee).WithMany().HasForeignKey(o => o.EmployeeID);
+            // Order relationships. Restrict: orders are history, so the database refuses to delete an item,
+            // employee or branch that orders refer to (the API archives them instead)
+            modelBuilder.Entity<Order>().HasOne(o => o.Item).WithMany().HasForeignKey(o => o.ItemID).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Order>().HasOne(o => o.Employee).WithMany().HasForeignKey(o => o.EmployeeID).OnDelete(DeleteBehavior.Restrict);
             
             // Order column configurations
             modelBuilder.Entity<Order>()
@@ -47,6 +50,13 @@ namespace Artifax.Data
                 .Property(o => o.TotalTime)
                 .HasDefaultValue(0);
             
+            // Stock rows carry a row version so two orders cannot both spend the same stock
+            modelBuilder.Entity<BranchItemCapacity>().Property(bic => bic.Version).IsRowVersion();
+
+            // Materials taken by an order belong to it; the item they refer to is history and is never deleted
+            modelBuilder.Entity<OrderMaterial>().HasOne(m => m.Order).WithMany(o => o.Materials).HasForeignKey(m => m.OrderID).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<OrderMaterial>().HasOne(m => m.Item).WithMany().HasForeignKey(m => m.ItemID).OnDelete(DeleteBehavior.Restrict);
+
             // OrderHistory relationships
             modelBuilder.Entity<OrderHistory>().HasOne(oh => oh.Order).WithMany(o => o.OrderHistories).HasForeignKey(oh => oh.OrderID);
             modelBuilder.Entity<OrderHistory>().HasOne(oh => oh.ChangedByEmployee).WithMany().HasForeignKey(oh => oh.ChangedByEmployeeID).IsRequired(false);

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Artifax.DTOs;
 using Artifax.Models;
@@ -35,19 +36,19 @@ namespace Artifax.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<EmployeeReadDto>>> GetAllUsers()
         {
-            return await context.Employees.Select(employee => EmployeeReadDto.ToDto(employee)).ToListAsync();
+            return await context.Employees.Where(employee => !employee.IsArchived).Select(employee => EmployeeReadDto.ToDto(employee)).ToListAsync();
         }
 
         [HttpGet("employees")]
         public async Task<ActionResult<IEnumerable<EmployeeReadDto>>> GetAllEmployees()
         {
-            return await context.Employees.Where(employee => employee.EmployeeLevel == EmployeeLevels.Employee.ToString()).Select(employee => EmployeeReadDto.ToDto(employee)).ToListAsync();
+            return await context.Employees.Where(employee => !employee.IsArchived && employee.EmployeeLevel == EmployeeLevels.Employee.ToString()).Select(employee => EmployeeReadDto.ToDto(employee)).ToListAsync();
         }
 
         [HttpGet("admins")]
         public async Task<ActionResult<IEnumerable<EmployeeReadDto>>> GetAllAdmins()
         {
-            return await context.Employees.Where(employee => employee.EmployeeLevel == EmployeeLevels.Admin.ToString()).Select(employee => EmployeeReadDto.ToDto(employee)).ToListAsync();
+            return await context.Employees.Where(employee => !employee.IsArchived && employee.EmployeeLevel == EmployeeLevels.Admin.ToString()).Select(employee => EmployeeReadDto.ToDto(employee)).ToListAsync();
         }
 
         //Get All Employee by Id
@@ -59,6 +60,7 @@ namespace Artifax.Controllers
             return EmployeeReadDto.ToDto(_result);
         }
 
+        [AllowAnonymous]
         [HttpGet("me")]
         public IActionResult GetCurrentUser()
         {
@@ -81,6 +83,7 @@ namespace Artifax.Controllers
             });
         }
 
+        [AllowAnonymous]
         [HttpGet("2fa-setup-uri")]
         public async Task<IActionResult> Get2FaSetupUri()
         {
@@ -140,11 +143,13 @@ namespace Artifax.Controllers
             return CreatedAtAction(nameof(GetEmployeeByEmail), new { email = _employee.EmployeeEmail }, _dto);
         }
 
+        [AllowAnonymous]
         [HttpPost("employees/login")]
         public async Task<ActionResult<EmployeeReadDto>> LoginEmployee(LoginDto incoming)
         {
             //Find employee by email
-            var _employee = await context.Employees.FirstOrDefaultAsync(employee => employee.EmployeeEmail == incoming.Email);
+            // Archived employees can no longer sign in
+            var _employee = await context.Employees.FirstOrDefaultAsync(employee => employee.EmployeeEmail == incoming.Email && !employee.IsArchived);
             if (_employee == null) return Unauthorized("Employee Not Found");
 
             //Verify employee password
@@ -168,6 +173,7 @@ namespace Artifax.Controllers
             return Ok(new { requires2FA = true, email = _employee.EmployeeEmail });
         }
 
+        [AllowAnonymous]
         [HttpPost("logout")]
         public IActionResult LogOutUser()
         {
@@ -178,6 +184,7 @@ namespace Artifax.Controllers
             return NoContent();
         }
 
+        [AllowAnonymous]
         [HttpPost("employees/verify-2fa")]
         public async Task<ActionResult<EmployeeReadDto>> Verify2Fa([FromBody] Dictionary<string, string> body)
         {
@@ -186,7 +193,7 @@ namespace Artifax.Controllers
             var pendingEmail = HttpContext.Session.GetString("Pending2FAEmail");
             if (string.IsNullOrEmpty(pendingEmail)) return Unauthorized("Session expired.");
 
-            var _employee = await context.Employees.FirstOrDefaultAsync(e => e.EmployeeEmail == pendingEmail);
+            var _employee = await context.Employees.FirstOrDefaultAsync(e => e.EmployeeEmail == pendingEmail && !e.IsArchived);
             if (_employee == null) return Unauthorized();
 
             // Verify the code
@@ -285,8 +292,8 @@ namespace Artifax.Controllers
             //Check for existing admin
             var _employee = await context.Employees.FindAsync(id);
             if (_employee == null) return NotFound($"Employee with ID: {id.ToString()} could not be found");
-            //Remove admin from list
-            context.Employees.Remove(_employee);
+            // Archive rather than delete: their orders and order history stay intact, and they can no longer sign in
+            _employee.IsArchived = true;
             //Save changes
             await context.SaveChangesAsync();
             return NoContent();

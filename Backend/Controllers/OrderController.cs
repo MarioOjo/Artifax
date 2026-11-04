@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Artifax.Models;
 using Artifax.Data;
 using Artifax.DTOs;
+using Artifax.Services;
 
 namespace Artifax.Controllers
 {
@@ -19,6 +20,26 @@ namespace Artifax.Controllers
         {
             context = incoming;
         }
+
+        // Stock rows have a row version: if another request changed one first, the whole save is rejected
+        private async Task<bool> TrySaveStockChangesAsync()
+        {
+            try
+            {
+                await context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return false;
+            }
+        }
+
+        private ObjectResult StockChangedConflict() =>
+            Conflict(new { message = "Stock changed while this was being saved. Please try again." });
+
+        private ObjectResult ShortageConflict(List<MaterialShortage> shortages) =>
+            Conflict(new { message = "Not enough materials at this branch.", shortages });
 
         #region GetRoutes
 
@@ -146,16 +167,22 @@ namespace Artifax.Controllers
             var item = await context.Items.FindAsync(newOrderDto.ItemID);
             if (item == null)
                 return BadRequest($"Item with ID {newOrderDto.ItemID} does not exist.");
+            if (item.IsArchived)
+                return BadRequest($"Item '{item.ItemName}' is archived and cannot be ordered.");
 
             // Validate that the branch exists in the database
             var branch = await context.Branches.FindAsync(newOrderDto.BranchID);
             if (branch == null)
                 return BadRequest($"Branch with ID {newOrderDto.BranchID} does not exist.");
+            if (branch.IsArchived)
+                return BadRequest($"Branch '{branch.BranchName}' is archived and cannot take orders.");
 
             // Validate that the employee exists in the database
             var employee = await context.Employees.FindAsync(newOrderDto.EmployeeID);
             if (employee == null)
                 return BadRequest($"Employee with ID {newOrderDto.EmployeeID} does not exist.");
+            if (employee.IsArchived)
+                return BadRequest($"Employee with ID {newOrderDto.EmployeeID} is archived.");
 
             // Calculate total production time
             int totalTime = newOrderDto.Quantity * item.ProductionTime;
@@ -186,8 +213,14 @@ namespace Artifax.Controllers
                 TimeElapsed = 0
             };
 
+            // Take the recipe's materials from the branch; the order and the stock change are saved together
+            var shortages = await OrderStock.TakeMaterialsAsync(context, newOrder);
+            if (shortages.Count > 0)
+                return ShortageConflict(shortages);
+
             context.Orders.Add(newOrder);
-            await context.SaveChangesAsync();
+            if (!await TrySaveStockChangesAsync())
+                return StockChangedConflict();
 
             // Reload and return the created order
             var created = await context.Orders
@@ -249,6 +282,14 @@ namespace Artifax.Controllers
             if (employee == null)
                 return BadRequest($"Employee with ID {updatedOrderDto.EmployeeID} does not exist.");
 
+            // A different item, quantity or branch needs different materials: return what the order took
+            // (to its original branch) before changing it, then take the new amounts
+            bool materialsChange = existingOrder.ItemID != updatedOrderDto.ItemID
+                || existingOrder.Quantity != updatedOrderDto.Quantity
+                || existingOrder.BranchID != updatedOrderDto.BranchID;
+            if (materialsChange)
+                await OrderStock.ReturnMaterialsAsync(context, existingOrder);
+
             // Update fields
             existingOrder.ItemID = updatedOrderDto.ItemID;
             existingOrder.Quantity = updatedOrderDto.Quantity;
@@ -263,7 +304,15 @@ namespace Artifax.Controllers
                 existingOrder.TotalTime = updatedOrderDto.Quantity * updatedItem.ProductionTime;
             }
 
-            await context.SaveChangesAsync();
+            if (materialsChange)
+            {
+                var shortages = await OrderStock.TakeMaterialsAsync(context, existingOrder);
+                if (shortages.Count > 0)
+                    return ShortageConflict(shortages);
+            }
+
+            if (!await TrySaveStockChangesAsync())
+                return StockChangedConflict();
 
             // Reload with includes for response
             var result = await context.Orders
@@ -335,6 +384,10 @@ namespace Artifax.Controllers
 
             order.Status = statusDto.Status;
 
+            // Cancelling an unfinished order gives its materials back to the branch
+            if (statusDto.Status == "Cancelled")
+                await OrderStock.ReturnMaterialsAsync(context, order);
+
             // Record the logged-in employee as the one who made the change, rather than trusting the request body
             int? changedByEmployeeId = statusDto.ChangedByEmployeeID;
             var sessionEmail = HttpContext?.Session.GetString("UserEmail");
@@ -356,7 +409,8 @@ namespace Artifax.Controllers
             };
 
             context.OrderHistories.Add(history);
-            await context.SaveChangesAsync();
+            if (!await TrySaveStockChangesAsync())
+                return StockChangedConflict();
 
             return Ok(new { message = "Order status updated successfully." });
         }
@@ -378,8 +432,11 @@ namespace Artifax.Controllers
             if (order.Status == "Complete" || order.Status == "Cancelled")
                 return BadRequest($"Cannot delete an order with status '{order.Status}'.");
 
+            // An unfinished order being deleted gives its materials back first
+            await OrderStock.ReturnMaterialsAsync(context, order);
             context.Orders.Remove(order);
-            await context.SaveChangesAsync();
+            if (!await TrySaveStockChangesAsync())
+                return StockChangedConflict();
 
             return NoContent();
         }

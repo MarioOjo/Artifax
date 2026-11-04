@@ -8,9 +8,9 @@ Each entry says what was wrong, why it mattered, what changed, and the commit th
 
 | Area | Changes |
 | --- | --- |
-| [1. Running on new infrastructure](#1-running-on-new-infrastructure) | 5 |
+| [1. Running on new infrastructure](#1-running-on-new-infrastructure) | 6 |
 | [2. Bug fixes from a code review](#2-bug-fixes-from-a-code-review) | 17 |
-| [3. Enhancement: secure, transactional crafting](#3-enhancement-secure-transactional-crafting) | planned |
+| [3. Enhancement: secure, transactional crafting](#3-enhancement-secure-transactional-crafting) | 5 |
 | [4. Known issues](#4-known-issues) | — |
 
 ---
@@ -61,6 +61,14 @@ Getting it running surfaced these problems.
 - **Result:** `app.asar` went from 266 MB to 4.5 MB, and the installer from 200 MB to 145 MB. The rest is the
   Electron runtime, which every Electron app ships. The packaged app was launched to confirm it starts.
 - **Commit:** `f6faa56`
+
+### 1.6 First release from this repository
+- **Problem:** The README sent people to the team's releases page, and described a zip download that the current
+  build does not produce.
+- **Fix:** Published [v0.1.0](https://github.com/MarioOjo/Artifax/releases/tag/v0.1.0) with the trimmed installer and
+  its SHA-256 checksum. The README install steps now link to this repository's latest release and cover the
+  SmartScreen prompt, sign-in with 2FA and the free-tier cold start.
+- **Commits:** release built from `1fbaeb4`; README `453ac4e`
 
 ---
 
@@ -219,13 +227,122 @@ Items 2.14 to 2.17 were found while bringing the tests up to date.
 
 ## 3. Enhancement: secure, transactional crafting
 
-Planned. It addresses the three most serious review findings, which need design changes rather than small fixes:
+Built on the `feature/secure-crafting` branch. It addresses the three most serious review findings, which needed
+design changes rather than small fixes:
 
 - **Open API:** item, stock and order endpoints work without logging in.
 - **Destructive deletes:** deleting an item or employee also deletes its orders, history and other products' recipe
   lines.
 - **Client-side stock changes:** materials are deducted by the app after the order is created. The server never
   checks stock, a failure leaves the order in place, and cancelling does not return materials.
+
+### 3.1 Local Docker stack and real-database tests
+- **Why first:** The existing tests use EF Core's in-memory database, which ignores foreign keys, cascade deletes and
+  transactions, the exact behaviour this enhancement changes. Local work also used the hosted database.
+- **Change:**
+  - `docker compose up` starts PostgreSQL and the API (built from the same Dockerfile Render uses), migrated and
+    seeded with demo data and a local admin. Seeding is opt-in through settings that only the compose file sets.
+  - Testcontainers tests start a throwaway PostgreSQL 18 per run, with a fresh database per test.
+  - The old compose file only ran the API, needed a missing `.env` file and pointed at `./backend` (wrong case on
+    Linux).
+- **Evidence:** Real-database tests cover migrations on an empty database, foreign-key enforcement, and seeding
+  (running it twice creates no duplicates). Backend: 89 of 89 passing, 85 of them without Docker.
+- **Commits:** `a82865c`, `6d630e1`, `0e55fba`
+- **Follow-up:** `npm start` opens the Electron window, which expects a React dev server that nothing started,
+  so it fell back to the last production build (pointing at the hosted API). Added `npm run web` for the dev
+  server, made the Electron fallback use `app://artifax` like the installed app, and corrected the README steps.
+  (`abf14d2`)
+
+### 3.2 Every endpoint requires a signed-in user
+- **Problem:** Only a few admin actions checked the session. Items, stock, orders, branches and the employee list,
+  including deletes, worked for anyone with the API's URL.
+- **Change:** An authentication handler turns the signed-in session into a standard ASP.NET Core user (email,
+  name, role), and a fallback policy requires a signed-in user on every endpoint. Only the sign-in flow is public:
+  login, 2FA setup, 2FA verify, logout and "who am I". A session that has passed the password step but not 2FA does
+  not count as signed in. Existing admin-only checks are unchanged.
+- **Evidence:** New tests send real HTTP requests through the whole API against a throwaway PostgreSQL database:
+  - anonymous reads and writes get 401, and an anonymous delete leaves the item in place;
+  - the password step alone does not sign in;
+  - a fully signed-in user can use the API;
+  - logout signs out.
+
+  With the policy removed, 12 of the 13 tests fail. The test host never loads user-secrets, and each test asserts
+  it is connected to the test container, not the hosted database. Backend: 102 of 102 passing.
+- **Commits:** `086ddee`, `239040f`
+
+### 3.3 Deletes keep history
+- **Problem:** Every relationship cascaded on delete.
+  - Deleting an item also deleted its orders, their history, its stock and its line in other products' recipes.
+  - Deleting an employee deleted every order they had placed.
+  - Deleting a branch deleted its employees, stock and orders.
+  - Removing a user happened on a single click, with no confirmation.
+- **Change:**
+  - Items, employees and branches are **archived** instead of deleted. They leave every list, but orders still
+    refer to them, so history keeps its names.
+  - Archived records cannot be ordered with, and an archived employee cannot sign in.
+  - The database enforces it too: orders' links to items, employees and branches, employees' link to their branch,
+    and recipe lines' link to their ingredient are now `ON DELETE RESTRICT`, so even a direct delete cannot wipe
+    history.
+  - Removing a user asks for confirmation, and messages describe what is kept.
+- **Design note:** Archived records are filtered where lists are built rather than with EF global query filters.
+  Global filters would hide an archived item from its own orders' history.
+- **Evidence:** Real-database tests against the demo data:
+  - deleting an item keeps its orders and history, and hides it from lists;
+  - deleting an ingredient leaves other recipes intact;
+  - an archived item cannot be ordered;
+  - deleting an employee keeps their orders and stops them signing in;
+  - the database rejects a direct delete of an item with orders (`23001 restrict_violation`).
+
+  With the old hard delete restored, the three item tests fail. Backend 107 of 107 and frontend 47 of 47 passing.
+- **Deploy note:** Apply the `ArchiveInsteadOfDelete` migration to the hosted database before deploying this code.
+- **Commits:** `85d93cc`, `091f831`, `cbccae8`
+
+### 3.4 Crafting takes and returns stock on the server
+- **Problem:** The app created the order, then in separate requests read and overwrote each material's stock,
+  clamping at zero.
+  - The server never checked stock.
+  - A failed stock update left the order in place.
+  - Two people crafting at once could spend the same stock.
+  - Cancelling an order never returned anything.
+- **Change:**
+  - Placing an order reads the recipe, checks the branch has every material, deducts them and saves the order in
+    one `SaveChanges`, which is one transaction. A shortage returns 409 listing what is missing, and nothing
+    changes.
+  - Stock rows carry a row version (PostgreSQL `xmin`). If another request changed a stock row first, the save is
+    rejected instead of overwriting it.
+  - The materials each order took are recorded in a new `OrderMaterials` table. Cancelling or deleting an
+    unfinished order returns exactly those amounts, even if the recipe changed since, and only once.
+  - Changing an order's item, quantity or branch returns its old materials to the original branch and takes the
+    new amounts.
+  - The craft button no longer touches stock itself, and shows the server's shortage details.
+- **Evidence:** Real-database tests through the API cover each behaviour above: materials taken and recorded;
+  shortages changing nothing, even for the materials that would have fitted; a single refund on cancel; refunds
+  surviving a recipe change; quantity changes; deletes; concurrent orders; and a lost update being rejected. With
+  the row version removed, the two concurrency tests fail in 3 of 3 runs. Also checked end to end on the local Docker
+  stack: 3 brackets took 6 Steel Sheets (120 → 114), cancelling returned them, and an order for 500 was refused.
+  Backend 115 of 115 and frontend 49 of 49 passing.
+- **Limitation:** Orders placed before this change have no recorded materials, so cancelling one returns nothing.
+- **Deploy note:** Apply the `RecordOrderMaterials` migration to the hosted database before deploying this code.
+- **Commits:** `5659517`, `f64bf99`, `2ea05f6`
+
+### 3.5 CI and a health endpoint
+- **Problem:** Nothing ran the tests automatically. There was no way to tell which commit was deployed, or whether
+  the API could reach its database.
+- **Change:**
+  - A GitHub Actions workflow (currently run manually, because Actions is unavailable on this account until a
+    billing issue is resolved):
+    - backend: build plus every test, including the real-PostgreSQL ones;
+    - frontend: clean install, type check and tests;
+    - Docker image: builds the image Render deploys.
+  - `GET /health` is public and reports the deployed commit (from Render's `RENDER_GIT_COMMIT`) and whether the
+    database is reachable. It returns 200 whenever the API runs, so a sleeping free-tier database does not make
+    Render restart a healthy API.
+- **Found along the way:** `npm ci` failed on Linux. The lock file was written by npm 11, and the npm 10 bundled
+  with Node 22 rejects its handling of an optional peer dependency. CI pins npm 11.5.2 to match.
+- **Evidence:** Before pushing, every CI step was run in Linux containers, which have case-sensitive paths. The
+  frontend passed 49 of 49 with a clean type check, and the backend built and passed its non-Docker tests. Backend
+  116 of 116 passing locally.
+- **Commits:** `8edf764`, `259aa7f`
 
 ---
 

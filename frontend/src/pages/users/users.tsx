@@ -177,15 +177,21 @@ const Users: React.FC = () => {
   };
 
   const handleDeleteUser = async (id: number) => {
+    // The API archives the user rather than deleting them, so their order history is kept
+    const confirmed = window.confirm('Remove this user? They will no longer be able to sign in. Their past orders and history are kept.');
+    if (!confirmed) {
+      return;
+    }
+
     try {
       await api.delete(`/User/employee?id=${encodeURIComponent(String(id))}`);
       await fetchUsers();
       setSelectedUserId(null);
-      showSuccess('User deleted successfully.');
+      showSuccess('User removed. Their order history is kept.');
       // do not clear or change current session when deleting a user
     } catch (err) {
       console.error('Delete user failed', err);
-      showError('Unable to delete user. Please try again.');
+      showError('Unable to remove user. Please try again.');
     }
   };
 

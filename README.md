@@ -5,6 +5,7 @@
 - [Installation](#installation)
 - [Usage Guide](#usage-guide)
 - [Additional Mockups](#additional-mockups)
+- [Running locally](#running-locally)
 - [Test Coverage](#test-coverage)
 - [Technologies used](#technologies-used)
 - [Acknowledgements](#acknowledgements)
@@ -124,6 +125,30 @@ Sign in with an account created by an administrator, then set up two-factor auth
 </table>
 
 
+
+## Running locally
+
+The backend and a PostgreSQL database run in Docker, so local work never touches the hosted database. Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/), the .NET 10 SDK and Node.js.
+
+```bash
+docker compose up --build        # API on http://localhost:8080 (Swagger at /swagger), seeded with demo data
+
+cd frontend && npm install
+REACT_APP_API_BASE=http://localhost:8080 npm run web   # React dev server on http://localhost:3000
+# PowerShell: $env:REACT_APP_API_BASE="http://localhost:8080"; npm run web
+
+npm start                        # optional, in a second terminal: the Electron window, loading the dev server
+```
+
+Open http://localhost:3000 in a browser, or use the Electron window. Sign in as `admin@artifax.local` / `ArtifaxDev1`, then set up 2FA with an authenticator app. Because this is a separate local account, it gets its own authenticator entry. `docker compose down -v` wipes the local database, and the next start seeds it again.
+
+Tests:
+
+```bash
+dotnet test Backend.Tests                                   # includes real-PostgreSQL tests (needs Docker)
+dotnet test Backend.Tests --filter "Category!=RequiresDocker"  # without Docker
+cd frontend && npm test
+```
 
 ## Test Coverage
 

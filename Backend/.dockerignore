@@ -1,0 +1,5 @@
+# Local build output (Windows) must not end up in the Linux image build
+bin/
+obj/
+.env
+*.user
