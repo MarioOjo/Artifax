@@ -68,8 +68,6 @@ function CraeteUsersPage({ user, onSave, onDelete, onRequestEdit }: CreateUsersP
   // This prevents parent refreshes (which may replace the `user` object) from
   // cancelling an in-progress edit for the same selected user.
   useEffect(() => {
-    let mounted = true;
-
     if (user) {
       setFullName(user.name);
       setBranch(user.branch);
@@ -97,8 +95,6 @@ function CraeteUsersPage({ user, onSave, onDelete, onRequestEdit }: CreateUsersP
       setShowPassword(false);
       lastUserIdRef.current = null;
     }
-
-    return () => { mounted = false; };
   }, [user]);
 
   const emailError = useMemo(() => {

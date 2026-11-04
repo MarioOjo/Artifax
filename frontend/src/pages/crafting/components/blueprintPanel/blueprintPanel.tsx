@@ -1,4 +1,4 @@
-import React, { FC, useState, useEffect } from 'react';
+import React, { FC, useCallback, useState, useEffect } from 'react';
 import './blueprintPanel.css';
 import unitIcon from '../../../../assets/images/uniitIcon.png';
 import unitIconWhite from '../../../../assets/images/uniitIconWhite.png';
@@ -12,12 +12,6 @@ interface Category {
   label: string;
 }
 
-interface IngredientBlueprint {
-  ingredientID: number;
-  itemName: string;
-  itemCategory: string;
-  quantity: number;
-}
 
 interface BlueprintPanelProps {
   selectedBlueprintId: string;
@@ -64,13 +58,6 @@ const BlueprintPanel: FC<BlueprintPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * Fetch blueprints from API on component mount.
-   */
-  useEffect(() => {
-    fetchBlueprintsFromApi();
-  }, [currentBranchId, refreshKey]);
-
-  /**
    * Auto-select the first blueprint when blueprints are loaded.
    */
   useEffect(() => {
@@ -84,7 +71,7 @@ const BlueprintPanel: FC<BlueprintPanelProps> = ({
    * Fetches blueprint data from the backend.
 
    */
-  const fetchBlueprintsFromApi = async () => {
+  const fetchBlueprintsFromApi = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -155,7 +142,12 @@ const BlueprintPanel: FC<BlueprintPanelProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [api, currentBranchId]);
+
+  // Load on mount, when the user's branch changes, and when the parent asks for a refresh
+  useEffect(() => {
+    fetchBlueprintsFromApi();
+  }, [fetchBlueprintsFromApi, refreshKey]);
 
   const filteredBlueprints = filter === 'all'
     ? blueprints

@@ -1,9 +1,7 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LoginPage.css';
-import { setCurrentUser } from '../../utils/currentUser';
-import { clearAuthToken, setAuthToken } from '../../utils/authToken';
-import {  getEmployeeByEmail, loginEmployee, getCurrentUserFromSession } from '../../services/authApi';
+import { loginEmployee } from '../../services/authApi';
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -53,7 +51,7 @@ function LoginPage() {
 
     try {
       // Maps precisely to LoginDto: { Email, Password }
-      const loginResponse = await loginEmployee({
+      await loginEmployee({
         email: email.trim(),
         password,
       });

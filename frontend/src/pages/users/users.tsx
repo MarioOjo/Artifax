@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PageHeader from '../../components/layout/PageHeader';
 import CraeteUsersPage from './componets/craeteUser/craeteusers';
 import UserList from './componets/userList/UserList';
@@ -40,7 +40,7 @@ const Users: React.FC = () => {
     setSelectedUserId(null);
   };
 
-  const fetchUsers = async (): Promise<User[]> => {
+  const fetchUsers = useCallback(async (): Promise<User[]> => {
     setLoading(true);
     try {
       const [adminsResp, employeesResp, branchesResp] = await Promise.all([
@@ -86,7 +86,7 @@ const Users: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [api]);
 
   const handleSaveUser = async (user: Omit<User, 'id'> & { id: number | null; password?: string }) => {
     try {
@@ -210,11 +210,9 @@ const Users: React.FC = () => {
     let mounted = true;
     if (usersFetchedRef.current) return; // already attempted fetch
     usersFetchedRef.current = true;
-    let timedOut = false;
     const timeoutId = setTimeout(() => {
       if (!mounted) return;
       console.error('Fetch users timed out');
-      timedOut = true;
       setLoading(false);
     }, 4000);
 
@@ -230,7 +228,7 @@ const Users: React.FC = () => {
     })();
 
     return () => { mounted = false; clearTimeout(timeoutId); };
-  }, []);
+  }, [fetchUsers]);
 
   return (
     <div className="page-content">
