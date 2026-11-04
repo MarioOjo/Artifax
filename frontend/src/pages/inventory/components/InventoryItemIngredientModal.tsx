@@ -206,7 +206,7 @@ function InventoryItemIngredientModal({ item, open, onClose }: InventoryItemIngr
               <div className="rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-muted">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em]">Recipe target</p>
                 <p className="mt-1">{item.itemName} · {item.itemCategory}</p>
-                <p>Production time: {item.productionTime}s</p>
+                <p>Production time: {item.productionTime} min</p>
               </div>
 
               <div className="flex items-center justify-end gap-3 border-t border-border pt-3">

@@ -36,7 +36,7 @@ function InventoryMaterialsPopover({ details, loading, compact = false }: Invent
           </h3>
           {details ? (
             <p className="mt-1 text-xs text-muted">
-              {details.category} · Production time {details.productionTime}s
+              {details.category} · Production time {details.productionTime} min
             </p>
           ) : null}
         </div>

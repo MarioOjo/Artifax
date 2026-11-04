@@ -139,7 +139,7 @@ const BlueprintPanel: FC<BlueprintPanelProps> = ({
         return {
           id: `bp-${itemId}`,
           name: itemInfo?.ItemName ?? item.itemName,
-          description: `Production time: ${itemInfo?.ProductionTime ?? item.productionTime}s`,
+          description: `Production time: ${itemInfo?.ProductionTime ?? item.productionTime} min`,
           category: normalizedCategory as any,
           have: inventoryMap[itemId] ?? 0,
           craft: 0,
