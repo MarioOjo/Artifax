@@ -248,6 +248,27 @@ need design changes rather than small fixes:
 - **Evidence:** Real-database tests cover migrations on an empty database, foreign-key enforcement, and seeding
   (running it twice creates no duplicates). Backend: 89 of 89 passing, 85 of them without Docker.
 - **Commits:** `a82865c`, `6d630e1`, `0e55fba`
+- **Follow-up:** `npm start` opens the Electron window, which expects a React dev server that nothing started,
+  so it fell back to the last production build (pointing at the hosted API). Added `npm run web` for the dev
+  server, made the Electron fallback use `app://artifax` like the installed app, and corrected the README steps.
+  (`abf14d2`)
+
+### 3.2 Every endpoint requires a signed-in user
+- **Problem:** Only a few admin actions checked the session. Items, stock, orders, branches and the employee list,
+  including deletes, worked for anyone with the API's URL.
+- **Change:** An authentication handler turns the signed-in session into a standard ASP.NET Core user (email,
+  name, role), and a fallback policy requires a signed-in user on every endpoint. Only the sign-in flow is public:
+  login, 2FA setup, 2FA verify, logout and "who am I". A session that has passed the password step but not 2FA does
+  not count as signed in. Existing admin-only checks are unchanged.
+- **Evidence:** New tests send real HTTP requests through the whole API against a throwaway PostgreSQL database:
+  - anonymous reads and writes get 401, and an anonymous delete leaves the item in place;
+  - the password step alone does not sign in;
+  - a fully signed-in user can use the API;
+  - logout signs out.
+
+  With the policy removed, 12 of the 13 tests fail. The test host never loads user-secrets, and each test asserts
+  it is connected to the test container, not the hosted database. Backend: 102 of 102 passing.
+- **Commits:** `086ddee`, `239040f`
 
 ---
 
