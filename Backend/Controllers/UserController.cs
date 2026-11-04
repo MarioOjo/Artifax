@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Artifax.DTOs;
 using Artifax.Models;
@@ -59,6 +60,7 @@ namespace Artifax.Controllers
             return EmployeeReadDto.ToDto(_result);
         }
 
+        [AllowAnonymous]
         [HttpGet("me")]
         public IActionResult GetCurrentUser()
         {
@@ -81,6 +83,7 @@ namespace Artifax.Controllers
             });
         }
 
+        [AllowAnonymous]
         [HttpGet("2fa-setup-uri")]
         public async Task<IActionResult> Get2FaSetupUri()
         {
@@ -140,6 +143,7 @@ namespace Artifax.Controllers
             return CreatedAtAction(nameof(GetEmployeeByEmail), new { email = _employee.EmployeeEmail }, _dto);
         }
 
+        [AllowAnonymous]
         [HttpPost("employees/login")]
         public async Task<ActionResult<EmployeeReadDto>> LoginEmployee(LoginDto incoming)
         {
@@ -168,6 +172,7 @@ namespace Artifax.Controllers
             return Ok(new { requires2FA = true, email = _employee.EmployeeEmail });
         }
 
+        [AllowAnonymous]
         [HttpPost("logout")]
         public IActionResult LogOutUser()
         {
@@ -178,6 +183,7 @@ namespace Artifax.Controllers
             return NoContent();
         }
 
+        [AllowAnonymous]
         [HttpPost("employees/verify-2fa")]
         public async Task<ActionResult<EmployeeReadDto>> Verify2Fa([FromBody] Dictionary<string, string> body)
         {

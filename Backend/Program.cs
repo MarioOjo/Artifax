@@ -1,5 +1,8 @@
+using Artifax.Auth;
 using Artifax.Data;
 using Artifax.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 
@@ -68,6 +71,14 @@ builder.Services.AddSession(option => {
     option.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
 
+// Every endpoint requires a signed-in user (password + 2FA) unless marked [AllowAnonymous]
+builder.Services.AddAuthentication(SessionAuthenticationHandler.SchemeName)
+    .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>(SessionAuthenticationHandler.SchemeName, null);
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+});
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -98,7 +109,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
 }
 
 app.UseCors("AllowReactApp");
@@ -107,8 +118,13 @@ app.UseHttpsRedirection();
 
 app.UseSession();
 
+// After UseSession: the authentication handler reads the signed-in user from the session
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
+
+// Exposed for WebApplicationFactory<Program> in Backend.Tests
+public partial class Program { }
