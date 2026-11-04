@@ -321,8 +321,8 @@ namespace Artifax.Controllers
                     return BadRequest($"Cannot activate order. Branch {order.BranchID} already has 3 active orders.");
             }
 
-            // Set StartedDateTime when transitioning to Active
-            if (statusDto.Status == "Active" && previousStatus != "Active")
+            // Set StartedDateTime the first time an order becomes Active; resuming keeps the original start
+            if (statusDto.Status == "Active" && order.StartedDateTime == null)
             {
                 order.StartedDateTime = DateTime.UtcNow;
             }
@@ -335,6 +335,15 @@ namespace Artifax.Controllers
 
             order.Status = statusDto.Status;
 
+            // Record the logged-in employee as the one who made the change, rather than trusting the request body
+            int? changedByEmployeeId = statusDto.ChangedByEmployeeID;
+            var sessionEmail = HttpContext?.Session.GetString("UserEmail");
+            if (!string.IsNullOrEmpty(sessionEmail))
+            {
+                var sessionEmployee = await context.Employees.FirstOrDefaultAsync(e => e.EmployeeEmail == sessionEmail);
+                changedByEmployeeId = sessionEmployee?.EmployeeId ?? changedByEmployeeId;
+            }
+
             // Create history entry
             var history = new OrderHistory
             {
@@ -342,7 +351,7 @@ namespace Artifax.Controllers
                 PreviousStatus = previousStatus,
                 NewStatus = statusDto.Status,
                 ChangedDateTime = DateTime.UtcNow,
-                ChangedByEmployeeID = statusDto.ChangedByEmployeeID,
+                ChangedByEmployeeID = changedByEmployeeId,
                 ChangeReason = statusDto.ChangeReason
             };
 

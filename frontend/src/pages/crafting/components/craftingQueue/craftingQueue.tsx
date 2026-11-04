@@ -91,11 +91,7 @@ const CraftingQueue: FC = () => {
           return map;
         }, {});
 
-        const allowedBranchIds = currentUser?.branchId === 3
-          ? []
-          : currentUser?.branchId != null
-            ? [currentUser.branchId]
-            : [];
+        const allowedBranchIds = currentUser?.branchId != null ? [currentUser.branchId] : [];
 
         const orders = ordersResponse.data
           .slice()
@@ -125,7 +121,7 @@ const CraftingQueue: FC = () => {
             name: order.itemName || `Order ${order.orderID}`,
             qty: order.quantity ?? 1,
             status,
-            progress: calculateProgress(order.totalTime, order.timeElapsed, expedited),
+            progress: calculateProgress(order.totalTime, order.timeElapsed),
             timeLeft: formatTimeLeft(order.totalTime, order.timeElapsed, expedited),
             materials: [order.itemName || `Item ${order.itemID}`],
             employeeName: employees[order.employeeID ?? 0] ?? 'Unknown Employee',
@@ -176,7 +172,8 @@ const CraftingQueue: FC = () => {
   const pageItems = page > 1
     ? queuedJobs.slice((page - 2) * itemsPerPage, (page - 1) * itemsPerPage)
     : [];
-  const activeCount = activeJobs.length;
+  // The 3-order limit applies to Active orders only; paused orders are listed but do not take a slot
+  const activeCount = activeJobs.filter((job) => job.status === 'Active').length;
 
   const handlePrevious = (): void => setPage((prev) => Math.max(1, prev - 1));
   const handleNext = (): void => setPage((prev) => Math.min(totalPages, prev + 1));

@@ -43,9 +43,6 @@ const HistoryStats: FC = () => {
         const response = await api.get<OrderDto[]>('/Order');
         const orders = response.data || [];
 
-        // Total Jobs: number of orders in queue
-        const queuedCount = orders.filter((o) => (o.status || '').toLowerCase() === 'queued').length;
-
         // Cancelled: sum of quantities for cancelled orders
         const cancelledSum = orders
           .filter((o) => (o.status || '').toLowerCase() === 'cancelled')
@@ -70,7 +67,8 @@ const HistoryStats: FC = () => {
 
         const avgMin = durations.length ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
 
-        setTotalJobs(queuedCount);
+        // Total Jobs: every order, whatever its status
+        setTotalJobs(orders.length);
         setCancelledItems(cancelledSum);
         setCompletedItems(completedSum);
         setAvgDuration(durations.length ? formatDuration(avgMin) : 'N/A');

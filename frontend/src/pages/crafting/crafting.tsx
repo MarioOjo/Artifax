@@ -256,7 +256,7 @@ const Crafting: FC = () => {
         const blueprint: Blueprint = {
           id: `bp-${blueprintItemId}`,
           name: blueprintInfo?.ItemName ?? item.itemName,
-          description: `Production time: ${blueprintInfo?.ProductionTime ?? item.productionTime}s`,
+          description: `Production time: ${blueprintInfo?.ProductionTime ?? item.productionTime} min`,
           category: (blueprintInfo?.ItemCategory ?? item.itemCategory ?? 'mechanical').toString().toLowerCase() as any,
           have: inventoryMap[blueprintItemId] ?? 0,
           craft: 0,
@@ -289,12 +289,6 @@ const Crafting: FC = () => {
       return;
     }
 
-    if (currentUser?.branchId === 3) {
-      showError(
-        'Branch 3 is a virtual branch and cannot craft directly. Please switch to branch 1 or 2 to craft.'
-      );
-      return;
-    }
 
     try {
       const branchID = currentUser?.branchId ?? 1;

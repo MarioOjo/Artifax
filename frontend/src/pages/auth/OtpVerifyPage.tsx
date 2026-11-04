@@ -33,7 +33,7 @@ function OtpVerifyPage() {
         setQrUri(_data.qrCodeUri);
       }
     } catch (error) {
-      console.log(error);
+      console.error('Failed to load 2FA setup code', error);
     }
   }
 
@@ -137,7 +137,7 @@ function OtpVerifyPage() {
         employeeId = employeeDetails.employeeId;
         branchId = employeeDetails.branchId;
         const branches = await getBranches();
-        branchName = branches.find((branch) => branch.BranchID === branchId)?.BranchName;
+        branchName = branches.find((branch) => branch.branchID === branchId)?.branchName;
       } catch (branchError) {
         branchName = undefined;
       }
@@ -156,7 +156,9 @@ function OtpVerifyPage() {
 
     } catch (err) {
       // 🌟 FAILURE: Switch status view inside the component
-      console.log(err);
+      console.error('2FA verification failed', err);
+      // Surface the server's reason (e.g. "Session expired." vs "Invalid 2FA Verification Code")
+      setErrorMessage(err instanceof Error ? err.message : '');
       setStatus('failed');
     }
   };
@@ -269,7 +271,7 @@ function OtpVerifyPage() {
                   </svg>
                 </div>
                 <h1>Verification Failed</h1>
-                <p>The code entered did not match. Try again with the latest OTP.</p>
+                <p>{errorMessage || 'The code entered did not match. Try again with the latest OTP.'}</p>
               </div>
 
               <div className="login-actions-column">

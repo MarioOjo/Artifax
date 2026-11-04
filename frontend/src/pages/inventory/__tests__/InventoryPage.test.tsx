@@ -7,7 +7,9 @@ jest.mock('../../../services/inventoryApi', () => {
     getItems: jest.fn(),
   };
 });
-jest.mock('../components/InventoryItemEditModal', () => () => null);
+// Stub the edit modal so the test can see which row it was opened for
+jest.mock('../components/InventoryItemEditModal', () => ({ item, open }: any) =>
+  open && item ? <div data-testid="edit-modal">Editing {item.name} at {item.location} (qty {item.quantity})</div> : null);
 jest.mock('../components/InventoryItemCreateModal', () => () => null);
 jest.mock('../components/InventoryItemIngredientModal', () => () => null);
 import React from 'react';
@@ -16,22 +18,26 @@ import userEvent from '@testing-library/user-event';
 import InventoryPage from '../InventoryPage';
 import * as inventoryApi from '../../../services/inventoryApi';
 
+const widgetAt = (branchId: number, location: string, quantity: number) => ({
+  id: '1',
+  name: 'Widget',
+  sku: 'PAR-1',
+  category: 'Parts',
+  quantity,
+  price: null,
+  minStock: 5,
+  location,
+  branchId,
+  status: 'OK',
+  productionTime: 42,
+  tab: 'parts',
+});
+
 describe('InventoryPage', () => {
-  it('renders inventory rows from overview and expands inline materials', async () => {
+  beforeEach(() => {
     (inventoryApi.getInventoryOverview as jest.Mock).mockResolvedValue({
-      items: [
-        {
-          id: 1,
-          name: 'Widget',
-          sku: 'WGT-1',
-          category: 'Parts',
-          quantity: 12,
-          minStock: 5,
-          location: 'Zone X',
-          status: 'OK',
-          tab: 'all',
-        },
-      ],
+      // The same item stocked at two branches
+      items: [widgetAt(1, 'Head Office', 12), widgetAt(2, 'Cape Town Plant', 40)],
       previewRows: [],
       alerts: [],
       stats: [],
@@ -59,18 +65,29 @@ describe('InventoryPage', () => {
       { ItemID: 1, ItemName: 'Widget', ItemCategory: 'Parts', ProductionTime: 42 },
       { ItemID: 11, ItemName: 'Screw', ItemCategory: 'Hardware', ProductionTime: 0 },
     ]);
+  });
 
+  it('renders a row per branch and expands only the clicked row', async () => {
     render(<InventoryPage />);
 
     expect(screen.getByText(/Inventory Management/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText('Widget')).toHaveLength(2));
 
-    await waitFor(() => expect(inventoryApi.getInventoryOverview).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getByText('Widget')).toBeInTheDocument());
-    expect(screen.getByText('Zone X')).toBeInTheDocument();
+    const viewButtons = screen.getAllByRole('button', { name: /View Widget/i });
+    await userEvent.click(viewButtons[1]);
 
-    await userEvent.click(screen.getByRole('button', { name: /View Widget/i }));
+    expect(await screen.findByText('Screw')).toBeInTheDocument();
+    expect(viewButtons[1]).toHaveAttribute('aria-expanded', 'true');
+    expect(viewButtons[0]).toHaveAttribute('aria-expanded', 'false');
+  });
 
-    await waitFor(() => expect(screen.getByText('Materials')).toBeInTheDocument());
-    expect(screen.getByText('Screw')).toBeInTheDocument();
+  it('opens the edit modal for the clicked branch row, not the first row with that item', async () => {
+    render(<InventoryPage />);
+    await waitFor(() => expect(screen.getAllByText('Widget')).toHaveLength(2));
+
+    const editButtons = screen.getAllByRole('button', { name: /Edit Widget/i });
+    await userEvent.click(editButtons[1]);
+
+    expect(screen.getByTestId('edit-modal')).toHaveTextContent('Editing Widget at Cape Town Plant (qty 40)');
   });
 });

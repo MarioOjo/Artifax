@@ -139,7 +139,7 @@ const BlueprintPanel: FC<BlueprintPanelProps> = ({
         return {
           id: `bp-${itemId}`,
           name: itemInfo?.ItemName ?? item.itemName,
-          description: `Production time: ${itemInfo?.ProductionTime ?? item.productionTime}s`,
+          description: `Production time: ${itemInfo?.ProductionTime ?? item.productionTime} min`,
           category: normalizedCategory as any,
           have: inventoryMap[itemId] ?? 0,
           craft: 0,
@@ -149,7 +149,6 @@ const BlueprintPanel: FC<BlueprintPanelProps> = ({
 
       // Store the mapped blueprints in local component state.
       setBlueprints(blueprints);
-      // console.log('app fetched blueprints', blueprints);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error occurred');
       console.error('Error fetching blueprints:', err);

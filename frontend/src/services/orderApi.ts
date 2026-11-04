@@ -23,35 +23,28 @@ function toFetchStyleError(error: unknown): Error {
   return new Error('Request failed');
 }
 
-type OrderItemDto = {
-  itemName: string;
-  quantity: number;
-};
-
+// Shape returned by GET /api/Order
 type OrderDto = {
   orderID: number;
-  orderDateTime: string;
+  itemID: number;
+  itemName: string;
+  quantity: number;
+  createdDateTime: string;
+  totalTime?: number;
+  timeElapsed?: number;
   status: string;
-  orderItems: OrderItemDto[];
+  branchID: number;
+  employeeID: number;
+  orderExpedite?: boolean;
+};
+
+type BranchDto = {
+  branchID: number;
+  branchName: string;
 };
 
 type OrderStatusUpdateDto = {
   status: string;
-};
-
-export type CraftingJobStatus = 'In Progress' | 'Paused' | 'Queued';
-
-export type CraftingJob = {
-  id: string;
-  name: string;
-  qty: number;
-  status: CraftingJobStatus;
-  progress: number;
-  timeLeft: string;
-  materials: string[];
-  location: string;
-  type: 'electronics' | 'mechanical' | 'logistics';
-  icon: string;
 };
 
 export type QueueJob = {
@@ -77,38 +70,6 @@ async function fetchJson<T>(url: string): Promise<T> {
   }
 }
 
-function formatDateTime(value: string): string {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat('en-ZA', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
-}
-
-function normalizeStatus(status: string): CraftingJobStatus | null {
-  const normalized = status.trim().toLowerCase();
-
-  if (normalized === 'in progress') return 'In Progress';
-  if (normalized === 'pending') return 'Queued';
-  if (normalized === 'paused') return 'Paused';
-
-  return null;
-}
-
-function deriveJobType(name: string): CraftingJob['type'] {
-  const lower = name.toLowerCase();
-
-  if (lower.includes('package') || lower.includes('box')) return 'logistics';
-  if (lower.includes('board') || lower.includes('panel') || lower.includes('control') || lower.includes('circuit')) return 'electronics';
-
-  return 'mechanical';
-}
-
 export async function getOrders(): Promise<OrderDto[]> {
   return fetchJson<OrderDto[]>('Order');
 }
@@ -117,8 +78,12 @@ export async function getUsers(): Promise<any[]> {
   return fetchJson<any[]>('User');
 }
 
+export async function getBranches(): Promise<BranchDto[]> {
+  return fetchJson<BranchDto[]>('Branch');
+}
+
 export async function getCraftingQueue(): Promise<{ activeItems: QueueJob[]; queuedItems: QueueJob[] }> {
-  const [orders, users] = await Promise.all([getOrders(), getUsers()]);
+  const [orders, users, branches] = await Promise.all([getOrders(), getUsers(), getBranches()]);
 
   const employeeMap = (users ?? []).reduce<Record<number, string>>((map, user: any) => {
     if (user.employeeId != null) {
@@ -128,91 +93,31 @@ export async function getCraftingQueue(): Promise<{ activeItems: QueueJob[]; que
     return map;
   }, {});
 
-  const sortedOrders = (orders ?? []).slice()
-    .sort((left, right) => new Date(left.orderDateTime).getTime() - new Date(right.orderDateTime).getTime())
-    .filter((order) => {
-      const status = normalizeQueueStatus(order.status);
-      return status === 'Queued' || status === 'Active' || status === 'Paused';
-    });
+  const branchMap = (branches ?? []).reduce<Record<number, string>>((map, branch) => {
+    map[branch.branchID] = branch.branchName;
+    return map;
+  }, {});
 
-  const normalizedOrders = sortedOrders.map((order) => {
-    const rawStatus = normalizeQueueStatus(order.status) ?? 'Queued';
-    return {
-      ...order,
-      status: rawStatus,
-    } as OrderDto & { status: QueueJobStatus };
-  });
-
-  const jobs = normalizedOrders.map((order) => {
-    const totalTime = (order as any).totalTime;
-    const timeElapsed = (order as any).timeElapsed;
-    const items = order.orderItems ?? [];
-    const materials = [items[0]?.itemName ?? `Item ${order.orderID}`];
-
-    return {
+  const jobs = (orders ?? [])
+    .map((order) => ({ order, status: normalizeQueueStatus(order.status) }))
+    .filter((entry): entry is { order: OrderDto; status: QueueJobStatus } => entry.status != null)
+    .sort((left, right) => new Date(left.order.createdDateTime).getTime() - new Date(right.order.createdDateTime).getTime())
+    .map(({ order, status }) => ({
       orderID: order.orderID,
       id: `order-${order.orderID}`,
-      name: items[0]?.itemName ?? `Order ${order.orderID}`,
-      qty: items.reduce((sum, item) => sum + (item.quantity ?? 0), 0) || items.length || 1,
-      status: order.status,
-      progress: calculateProgress(totalTime, timeElapsed),
-      timeLeft: formatTimeLeft(totalTime, timeElapsed),
-      materials,
-      employeeName: employeeMap[(order as any).employeeID ?? 0] ?? 'Unknown Employee',
-      createdDateTime: order.orderDateTime,
-      location: `Order ${order.orderID}`,
-    } satisfies QueueJob;
-  });
+      name: order.itemName || `Order ${order.orderID}`,
+      qty: order.quantity ?? 1,
+      status,
+      progress: calculateProgress(order.totalTime, order.timeElapsed),
+      timeLeft: formatTimeLeft(order.totalTime, order.timeElapsed, order.orderExpedite === true),
+      materials: [order.itemName || `Item ${order.itemID}`],
+      employeeName: employeeMap[order.employeeID] ?? 'Unknown Employee',
+      createdDateTime: order.createdDateTime,
+      location: branchMap[order.branchID] ?? `Branch ${order.branchID}`,
+    } satisfies QueueJob));
 
   return {
     activeItems: jobs.filter((job) => job.status === 'Active' || job.status === 'Paused'),
-    queuedItems: jobs.filter((job) => job.status === 'Queued'),
-  };
-}
-
-export async function getCraftingJobs(): Promise<CraftingJob[]> {
-  const orders = await getOrders();
-
-  return orders
-    .map((order) => {
-      const status = normalizeStatus(order.status);
-
-      if (status == null) {
-        return null;
-      }
-
-      const totalQuantity = order.orderItems.reduce((sum, item) => sum + (item.quantity ?? 0), 0);
-      const primaryItem = order.orderItems[0]?.itemName ?? `Order #${order.orderID}`;
-      const materialLabels = order.orderItems.map((item) => `${item.itemName} x${item.quantity}`);
-
-      return {
-        id: `order-${order.orderID}`,
-        name: primaryItem,
-        qty: totalQuantity || order.orderItems.length || 1,
-        status,
-        progress: status === 'In Progress' ? 45 : 0,
-        timeLeft: formatDateTime(order.orderDateTime),
-        materials: materialLabels,
-        location: `Order ${order.orderID}`,
-        type: deriveJobType(primaryItem),
-        icon: 'unitIcon',
-      } satisfies CraftingJob;
-    })
-    .filter((job): job is CraftingJob => job != null)
-    .sort((left, right) => {
-      if (left.status !== right.status) {
-        return left.status === 'In Progress' ? -1 : 1;
-      }
-
-      return left.id.localeCompare(right.id);
-    });
-}
-
-export async function getActiveAndQueuedJobs(): Promise<{ activeItems: CraftingJob[]; queuedItems: CraftingJob[] }> {
-  const jobs = await getCraftingJobs();
-
-  return {
-    activeItems: jobs.filter((job) => job.status !== 'Queued'),
     queuedItems: jobs.filter((job) => job.status === 'Queued'),
   };
 }
@@ -236,9 +141,8 @@ export async function deleteOrder(orderId: number): Promise<void> {
 const orderApi = {
   getOrders,
   getUsers,
+  getBranches,
   getCraftingQueue,
-  getCraftingJobs,
-  getActiveAndQueuedJobs,
   updateOrderStatus,
   deleteOrder,
 };

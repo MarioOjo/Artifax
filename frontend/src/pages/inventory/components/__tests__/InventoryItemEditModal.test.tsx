@@ -17,6 +17,7 @@ describe('InventoryItemEditModal', () => {
       price: 199.99,
       minStock: 5,
       location: 'Johannesburg',
+      branchId: 2,
       status: 'LOW',
       productionTime: 50,
     };

@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using System.Text;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore.InMemory.Query.Internal;
+using Google.Authenticator;
 
 namespace Backend.Tests
 {
@@ -66,10 +67,14 @@ namespace Backend.Tests
             return _controller;
         }
 
+        // Context behind the most recent GetPopulatedDummyController, used to read 2FA secrets
+        ArtifaxContext _populatedContext;
+
         async Task<UserController> GetPopulatedDummyController ()
         {
             var _options = GetDbContextOptions();
             var _context = new ArtifaxContext(_options);
+            _populatedContext = _context;
             
             foreach (var testEmployee in testEmployees)
             {
@@ -95,6 +100,17 @@ namespace Backend.Tests
             var _httpContextMock = new Mock<HttpContext>();
             _httpContextMock.Setup(c => c.Session).Returns(_fakeSession);
             return _httpContextMock;
+        }
+
+        // Logs in through both steps: password, then a TOTP code generated from the stored secret
+        // exactly as an authenticator app would.
+        async Task<ActionResult<EmployeeReadDto>> LoginWith2FaAsync(UserController controller, string email, string password)
+        {
+            await controller.LoginEmployee(new (){Email=email, Password=password});
+
+            var _secret = (await _populatedContext.Employees.FirstAsync(e => e.EmployeeEmail == email)).TwoFactorSecret;
+            var _code = new TwoFactorAuthenticator().GetCurrentPIN(_secret);
+            return await controller.Verify2Fa(new Dictionary<string, string> { ["code"] = _code });
         }
 
         [Fact]
@@ -140,11 +156,53 @@ namespace Backend.Tests
             // When
             var _dto = await _controller.LoginEmployee(new (){Email="employee1@artifax.com", Password="123"});
         
-            // Then
+            // Then: the password step succeeds but asks for a 2FA code, without logging the user in yet
             var _actionResult = Assert.IsType<ActionResult<EmployeeReadDto>> (_dto);
-            var _returnedOk = Assert.IsType<OkObjectResult>(_actionResult.Result);
+            Assert.IsType<OkObjectResult>(_actionResult.Result);
+            Assert.Equal("employee1@artifax.com", _httpContextMockSessionValue(httpContextMock, "Pending2FAEmail"));
+            Assert.Null(_httpContextMockSessionValue(httpContextMock, "UserLevel"));
+        }
+
+        [Fact]
+        public async Task LoginEmployee_WithValid2FaCode_ReturnsEmployee()
+        {
+            // Given
+            var _controller = await GetPopulatedDummyController();
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = GetMockSession().Object
+            };
+        
+            // When
+            var _dto = await LoginWith2FaAsync(_controller, "employee1@artifax.com", "123");
+        
+            // Then
+            var _returnedOk = Assert.IsType<OkObjectResult>(_dto.Result);
             var _returnedDto = Assert.IsType<EmployeeReadDto>(_returnedOk.Value);
             Assert.Equal("Emp1", _returnedDto.EmployeeName);
+        }
+
+        [Fact]
+        public async Task LoginEmployee_WithWrong2FaCode_IsRejected()
+        {
+            // Given
+            var _controller = await GetPopulatedDummyController();
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = GetMockSession().Object
+            };
+            await _controller.LoginEmployee(new (){Email="employee1@artifax.com", Password="123"});
+        
+            // When
+            var _dto = await _controller.Verify2Fa(new Dictionary<string, string> { ["code"] = "000000" });
+        
+            // Then
+            Assert.IsType<UnauthorizedObjectResult>(_dto.Result);
+        }
+
+        static string _httpContextMockSessionValue(Mock<HttpContext> httpContextMock, string key)
+        {
+            return httpContextMock.Object.Session.TryGetValue(key, out var _bytes) ? Encoding.UTF8.GetString(_bytes) : null;
         }
 
         [Fact]
@@ -176,7 +234,7 @@ namespace Backend.Tests
             {
                 HttpContext = _httpContextMock.Object
             };
-            await _controller.LoginEmployee(new (){Email="admin1@artifax.com", Password="123"});
+            await LoginWith2FaAsync(_controller, "admin1@artifax.com", "123");
         
             // When
             var _response = await _controller.ChangeEmployeeBranch("employee1@artifax.com", 2);
@@ -201,7 +259,7 @@ namespace Backend.Tests
             {
                 HttpContext = _httpContextMock.Object
             };
-            await _controller.LoginEmployee(new (){Email="admin1@artifax.com", Password="123"});
+            await LoginWith2FaAsync(_controller, "admin1@artifax.com", "123");
         
             // When
             var _response = await _controller.DeleteEmployee(100);
@@ -220,7 +278,7 @@ namespace Backend.Tests
             {
                 HttpContext = _httpContextMock.Object
             };
-            await _controller.LoginEmployee(new (){Email="admin1@artifax.com", Password="123"});
+            await LoginWith2FaAsync(_controller, "admin1@artifax.com", "123");
         
             // When
             var _response = _controller.GetCurrentUser();

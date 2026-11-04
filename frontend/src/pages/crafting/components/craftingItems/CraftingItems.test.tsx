@@ -1,18 +1,25 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import axios from 'axios';
 import CraftingItems from './craftingItems';
+import { useApi } from '../../../../hooks';
 
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+jest.mock('../../../../hooks', () => ({
+  useApi: jest.fn(),
+  useThemeAwareIcon: (icon: string) => icon,
+}));
+
+const mockedUseApi = useApi as jest.MockedFunction<typeof useApi>;
+const mockApi = { get: jest.fn(), put: jest.fn() };
 
 describe('CraftingItems', () => {
-  afterEach(() => {
-    jest.resetAllMocks();
+  beforeEach(() => {
+    mockApi.get.mockReset();
+    mockApi.put.mockReset();
+    mockedUseApi.mockReturnValue(mockApi as any);
   });
 
   it('renders active crafting jobs and action buttons from backend orders', async () => {
-    mockedAxios.get.mockImplementation((url: string) => {
+    mockApi.get.mockImplementation((url: string) => {
       if (url.endsWith('/Order')) {
         return Promise.resolve({ data: [
           { orderID: 1, itemID: 101, itemName: 'Circuit Board A1', quantity: 2, createdDateTime: '2025-01-01T08:00:00Z', totalTime: 120, timeElapsed: 15, status: 'Active', employeeID: 1 },
@@ -29,6 +36,9 @@ describe('CraftingItems', () => {
         ] });
       }
 
+      if (url.endsWith('/Branch')) {
+        return Promise.resolve({ data: [{ branchID: 1, branchName: 'Head Office' }] });
+      }
       if (url.includes('/Item/itemIngredient/item/')) {
         return Promise.resolve({ data: [
           { itemID: 201, itemName: 'Metal Plate', quantity: 2 },
@@ -39,7 +49,7 @@ describe('CraftingItems', () => {
       return Promise.reject(new Error('Unknown URL'));
     });
 
-    mockedAxios.put.mockResolvedValue({});
+    mockApi.put.mockResolvedValue({});
 
     render(<CraftingItems />);
 
@@ -55,7 +65,7 @@ describe('CraftingItems', () => {
   });
 
   it('updates card transform when the mouse moves and resets on leave', async () => {
-    mockedAxios.get.mockImplementation((url: string) => {
+    mockApi.get.mockImplementation((url: string) => {
       if (url.endsWith('/Order')) {
         return Promise.resolve({ data: [
           { orderID: 1, itemID: 101, itemName: 'Circuit Board A1', quantity: 2, createdDateTime: '2025-01-01T08:00:00Z', totalTime: 120, timeElapsed: 15, status: 'Active', employeeID: 1 },
@@ -64,13 +74,16 @@ describe('CraftingItems', () => {
       if (url.endsWith('/User')) {
         return Promise.resolve({ data: [{ employeeId: 1, employeeName: 'Alice' }] });
       }
+      if (url.endsWith('/Branch')) {
+        return Promise.resolve({ data: [{ branchID: 1, branchName: 'Head Office' }] });
+      }
       if (url.includes('/Item/itemIngredient/item/')) {
         return Promise.resolve({ data: [{ itemID: 201, itemName: 'Metal Plate', quantity: 2 }] });
       }
       return Promise.reject(new Error('Unknown URL'));
     });
 
-    mockedAxios.put.mockResolvedValue({});
+    mockApi.put.mockResolvedValue({});
 
     render(<CraftingItems />);
 

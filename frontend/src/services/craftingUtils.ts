@@ -10,11 +10,11 @@ export function normalizeQueueStatus(status?: string): QueueJobStatus | null {
   return null;
 }
 
-export function calculateProgress(totalTime?: number, timeElapsed?: number, expedited = false): number {
-  if (totalTime == null || totalTime === 0 || timeElapsed == null) return 0;
-  const effectiveTotal = expedited ? totalTime / 2 : totalTime;
-  if (effectiveTotal <= 0) return 0;
-  return Math.min(100, Math.max(0, Math.round((timeElapsed / effectiveTotal) * 100)));
+// The backend already advances expedited orders at double speed (TimeElapsed += 2 per minute),
+// so progress is always elapsed / total; expediting only shortens the real time left.
+export function calculateProgress(totalTime?: number, timeElapsed?: number): number {
+  if (totalTime == null || totalTime <= 0 || timeElapsed == null) return 0;
+  return Math.min(100, Math.max(0, Math.round((timeElapsed / totalTime) * 100)));
 }
 
 export function formatTimeLeft(totalTime?: number, timeElapsed?: number, expedited = false): string {
@@ -22,7 +22,6 @@ export function formatTimeLeft(totalTime?: number, timeElapsed?: number, expedit
     return 'No estimate';
   }
 
-  const effectiveTotal = expedited ? totalTime / 2 : totalTime;
-  const remaining = Math.max(0, effectiveTotal - timeElapsed);
+  const remaining = Math.max(0, totalTime - timeElapsed) / (expedited ? 2 : 1);
   return remaining === 0 ? 'Complete' : `${Math.ceil(remaining)} min left`;
 }

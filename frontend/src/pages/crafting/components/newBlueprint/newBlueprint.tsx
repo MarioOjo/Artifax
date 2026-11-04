@@ -105,14 +105,29 @@ const NewBlueprint: FC<NewBlueprintProps> = ({ onCancel }) => {
     try {
       const itemsResponse = await api.get('/Item/item/');
       const existingItems: any[] = itemsResponse.data || [];
+      // Match names case-insensitively so "steel sheet" reuses "Steel Sheet" instead of creating a duplicate
+      const nameKey = (name: string): string => name.trim().toLowerCase();
       const nameToId = existingItems.reduce<Record<string, number>>((map, item) => {
         if (item?.itemName && item?.itemID) {
-          map[item.itemName] = item.itemID;
+          map[nameKey(item.itemName)] = item.itemID;
         }
         return map;
       }, {});
 
-      let itemId = nameToId[blueprintName.trim()];
+      let itemId = nameToId[nameKey(blueprintName)];
+      if (itemId) {
+        // Reusing an existing item is fine (e.g. turning a raw material into a craftable product),
+        // but not one that already has a recipe: that would silently overwrite another blueprint.
+        const existingRecipe = await api
+          .get(`/Item/itemIngredient/item/${itemId}`)
+          .then((response) => response.data as unknown[])
+          .catch(() => []);
+        if (existingRecipe.length > 0) {
+          showError(`A blueprint named "${blueprintName.trim()}" already exists. Edit it instead.`);
+          return;
+        }
+      }
+
       if (!itemId) {
         const itemPayload = {
           itemName: blueprintName.trim(),
@@ -121,7 +136,7 @@ const NewBlueprint: FC<NewBlueprintProps> = ({ onCancel }) => {
           price: Number(price) || 0,
         };
 
-        const createdItemResponse = await api.post('/Item/item/', itemPayload);
+        const createdItemResponse = await api.post('/Item/item/CreateItemDefaultQuantity', itemPayload);
         itemId = createdItemResponse.data?.itemID;
         if (!itemId) {
           throw new Error('Unable to create the item for this blueprint.');
@@ -142,16 +157,17 @@ const NewBlueprint: FC<NewBlueprintProps> = ({ onCancel }) => {
           continue;
         }
 
-        let ingredientId = nameToId[materialName];
+        let ingredientId = nameToId[nameKey(materialName)];
         if (!ingredientId) {
-          const createdIngredientResponse = await api.post('/Item/item/', {
+          // Creates the item with a zero-stock row at every branch, so it appears in Inventory and can be stocked
+          const createdIngredientResponse = await api.post('/Item/item/CreateItemDefaultQuantity', {
             itemName: materialName,
             itemCategory: 'other',
             productionTime: 1,
           });
           ingredientId = createdIngredientResponse.data?.itemID;
           if (ingredientId) {
-            nameToId[materialName] = ingredientId;
+            nameToId[nameKey(materialName)] = ingredientId;
           }
         }
 
@@ -170,21 +186,8 @@ const NewBlueprint: FC<NewBlueprintProps> = ({ onCancel }) => {
         price: Number(price) || 0,
         ingredients: ingredientPayloads,
       };
-      await api.put(`/Item/item/${itemId}/blueprint`, blueprintPayload);
-
-      try {
-        const branchesResponse = await api.get('/Branch');
-        const branches: any[] = branchesResponse.data || [];
-        if (branches.length > 0) {
-          await api.post('/Item/Branch', {
-            branchID: branches[0].branchID,
-            itemID: itemId,
-            itemQuantity: 0,
-          });
-        }
-      } catch (branchError) {
-        // optional inventory zero-quantity creation; ignore if branch data is unavailable
-      }
+      // The edit endpoint replaces the recipe, so a material listed twice cannot create duplicate lines
+      await api.put(`/Item/item/${itemId}/blueprint/edit`, blueprintPayload);
 
       showSuccess('Blueprint created successfully. Returning to crafting page.');
       onCancel();
