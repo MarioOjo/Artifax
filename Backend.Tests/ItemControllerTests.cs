@@ -724,5 +724,37 @@ namespace Backend.Tests
             // ASSERT
             Assert.IsType<NotFoundObjectResult>(result);
         }
+
+        [Fact]
+        public async Task EditItemBlueprint_WithRepeatedIngredient_StoresOneMergedLine()
+        {
+            // ARRANGE
+            var options = GetDbContextOptions();
+            using var context = new ArtifaxContext(options);
+            context.Items.AddRange(
+                new Item { ItemID = 1, ItemName = "Bracket", ItemCategory = "Metal", ProductionTime = 5 },
+                new Item { ItemID = 2, ItemName = "Steel Sheet", ItemCategory = "Metal", ProductionTime = 0 });
+            await context.SaveChangesAsync();
+            var controller = new ItemController(context);
+
+            var incoming = new ItemBlueprintWriteDto
+            {
+                ItemID = 1,
+                ProductionTime = 5,
+                Ingredients = new List<IngredientBlueprintWriteDto>
+                {
+                    new IngredientBlueprintWriteDto { IngredientID = 2, IngredientQuantity = 2 },
+                    new IngredientBlueprintWriteDto { IngredientID = 2, IngredientQuantity = 3 }
+                }
+            };
+
+            // ACT
+            await controller.EditItemBlueprint(1, incoming);
+
+            // ASSERT
+            var line = Assert.Single(await context.ItemIngredients.Where(ig => ig.ProductID == 1).ToListAsync());
+            Assert.Equal(2, line.IngredientID);
+            Assert.Equal(5, line.IngredientQuantity);
+        }
     }
 }

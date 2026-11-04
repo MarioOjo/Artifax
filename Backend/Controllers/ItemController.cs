@@ -199,6 +199,12 @@ namespace Artifax.Controllers
             item.Price = incoming.Price;
             if (incoming.Ingredients != null)
             {
+                // Merge repeated ingredients so the same material listed twice becomes one recipe line
+                incoming.Ingredients = incoming.Ingredients
+                    .GroupBy(i => i.IngredientID)
+                    .Select(g => new IngredientBlueprintWriteDto { IngredientID = g.Key, IngredientQuantity = g.Sum(i => i.IngredientQuantity) })
+                    .ToList();
+
                 var incomingIngredientIds = incoming.Ingredients.Select(i => i.IngredientID).ToList();
                 var ingredientsToRemove = item.ProductItemIngredients
                     .Where(existing => !incomingIngredientIds.Contains(existing.IngredientID))

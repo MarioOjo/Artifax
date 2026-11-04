@@ -128,9 +128,11 @@ const BlueprintEdit: FC<BlueprintEditProps> = ({ itemId, onCancel, onSaved }) =>
     try {
       const itemsResponse = await api.get('/Item/item/');
       const existingItems: any[] = itemsResponse.data || [];
+      // Match names case-insensitively so "steel sheet" reuses "Steel Sheet" instead of creating a duplicate
+      const nameKey = (name: string): string => name.trim().toLowerCase();
       const nameToId = existingItems.reduce<Record<string, number>>((map, item) => {
         if (item?.itemName && item?.itemID) {
-          map[item.itemName] = item.itemID;
+          map[nameKey(item.itemName)] = item.itemID;
         }
         return map;
       }, {});
@@ -149,16 +151,17 @@ const BlueprintEdit: FC<BlueprintEditProps> = ({ itemId, onCancel, onSaved }) =>
           continue;
         }
 
-        let ingredientId = nameToId[materialName];
+        let ingredientId = nameToId[nameKey(materialName)];
         if (!ingredientId) {
-          const createdIngredientResponse = await api.post('/Item/item/', {
+          // Creates the item with a zero-stock row at every branch, so it appears in Inventory and can be stocked
+          const createdIngredientResponse = await api.post('/Item/item/CreateItemDefaultQuantity', {
             itemName: materialName,
             itemCategory: 'other',
             productionTime: 1,
           });
           ingredientId = createdIngredientResponse.data?.itemID;
           if (ingredientId) {
-            nameToId[materialName] = ingredientId;
+            nameToId[nameKey(materialName)] = ingredientId;
           }
         }
 
