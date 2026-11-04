@@ -31,4 +31,9 @@
     <InternalsVisibleTo Include="Backend.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Ships with the app so Database:SeedDemoData can load it -->
+    <None Update="Data\seed-demo.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -1,13 +1,50 @@
-version: '3.8'
+# Local development stack: PostgreSQL plus the API built from the same Dockerfile Render uses.
+#
+#   docker compose up --build     start (API on http://localhost:8080, Swagger at /swagger)
+#   docker compose down           stop, keeping the database
+#   docker compose down -v        stop and wipe the database (next start re-seeds it)
+#
+# The database is local and disposable; it never touches the hosted (Aiven) database.
+# Sign in with the dev admin below (override with ARTIFAX_DEV_ADMIN_EMAIL / ARTIFAX_DEV_ADMIN_PASSWORD).
 
 services:
-  api:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080" 
-    env_file:
-      - .env
+  db:
+    image: postgres:18-alpine
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      POSTGRES_DB: artifax
+      POSTGRES_USER: artifax
+      POSTGRES_PASSWORD: artifax-local
+    ports:
+      - "5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U artifax -d artifax"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      DATABASE_HOST: db
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: artifax
+      DATABASE_USERNAME: artifax
+      DATABASE_PASSWORD: artifax-local
+      DATABASE_SSL_MODE: Disable
+      Database__MigrateOnStartup: "true"
+      Database__SeedDemoData: "true"
+      Database__DevAdminEmail: ${ARTIFAX_DEV_ADMIN_EMAIL:-admin@artifax.local}
+      Database__DevAdminPassword: ${ARTIFAX_DEV_ADMIN_PASSWORD:-ArtifaxDev1}
+
+volumes:
+  db-data:
