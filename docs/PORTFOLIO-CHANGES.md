@@ -8,7 +8,7 @@ Each entry says what was wrong, why it mattered, what changed, and the commit th
 
 | Area | Changes |
 | --- | --- |
-| [1. Running on new infrastructure](#1-running-on-new-infrastructure) | 4 |
+| [1. Running on new infrastructure](#1-running-on-new-infrastructure) | 5 |
 | [2. Bug fixes from a code review](#2-bug-fixes-from-a-code-review) | 17 |
 | [3. Enhancement: secure, transactional crafting](#3-enhancement-secure-transactional-crafting) | planned |
 | [4. Known issues](#4-known-issues) | — |
@@ -48,6 +48,19 @@ Getting it running surfaced these problems.
   their recipes, branch stock, six fictional employees and 18 orders with history. It refuses to run if items or
   orders already exist.
 - **Commit:** `963af2f`
+
+### 1.5 The installer bundled the whole build toolchain
+- **Problem:** `package.json` lists build-time tools (react-scripts, TypeScript, Tailwind, the testing libraries)
+  as dependencies, and Electron Forge packs every dependency into the app. The app archive (`app.asar`) was 266 MB
+  when it only needs the React production build and `main.js`. Separately, the Windows installer runs the app with
+  install and uninstall flags so it can manage shortcuts, but `main.js` never checked for them, so the app opened
+  during install and uninstall instead of exiting.
+- **Fix:** The packager now includes an explicit allowlist: `package.json`, `main.js`, `build/` and the one runtime
+  package. `main.js` handles the installer's flags with `electron-squirrel-startup` and takes its window icon from
+  `build/`, which is the folder that ships.
+- **Result:** `app.asar` went from 266 MB to 4.5 MB, and the installer from 200 MB to 145 MB. The rest is the
+  Electron runtime, which every Electron app ships. The packaged app was launched to confirm it starts.
+- **Commit:** `f6faa56`
 
 ---
 
