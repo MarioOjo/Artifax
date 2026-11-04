@@ -9,7 +9,7 @@ Each entry says what was wrong, why it mattered, what changed, and the commit th
 | Area | Changes |
 | --- | --- |
 | [1. Running on new infrastructure](#1-running-on-new-infrastructure) | 4 |
-| [2. Bug fixes from a code review](#2-bug-fixes-from-a-code-review) | 13 |
+| [2. Bug fixes from a code review](#2-bug-fixes-from-a-code-review) | 17 |
 | [3. Enhancement: secure, transactional crafting](#3-enhancement-secure-transactional-crafting) | planned |
 | [4. Known issues](#4-known-issues) | — |
 
@@ -70,7 +70,13 @@ least serious.
 | 2.10 | Branch name lost after login | fixed |
 | 2.11 | 2FA failures always showed the same message, hiding the real cause | fixed |
 | 2.12 | Debug logging left in production code | fixed |
-| 2.13 | Out-of-date tests (frontend 27 of 39 failing, backend 4 of 80) | planned |
+| 2.13 | Out-of-date tests (frontend 27 of 39 failing, backend 4 of 80) | fixed |
+| 2.14 | "Total Jobs" stat counted only queued orders | fixed |
+| 2.15 | Queue counter counted paused orders against the 3-active limit | fixed |
+| 2.16 | Crafting history showed "Unknown" for every employee | fixed |
+| 2.17 | Cancelling a user edit could set their password to "************" | fixed |
+
+Items 2.14 to 2.17 were found while bringing the tests up to date.
 
 ### 2.1 Editing an inventory row could overwrite another branch's stock
 - **Problem:** Each item appears once per branch, but the inventory page tracked the row being edited by item ID
@@ -158,6 +164,43 @@ least serious.
   responses and the full inventory list on every filter change.
 - **Fix:** Removed. Remaining error logs use `console.error` with a message.
 - **Commits:** `42c264e` (inventory), `1ddf197`
+
+### 2.13 Out-of-date tests
+- **Problem:** When the project was handed over, 27 of 39 frontend tests and 4 of 80 backend tests failed.
+  - Frontend mocks were missing a newer hook, and the test environment lacks `scrollIntoView`.
+  - Several suites mocked `axios` or `fetch`, but the components use a shared API client, so the mocks never
+    applied. The inventory service tests were calling the deployed API.
+  - Many assertions checked placeholder values from before the screens were connected to the API.
+  - Backend user tests still expected a one-step login, from before 2FA.
+- **Fix:** Tests now mock the shared API client and assert real behaviour. Backend login tests go through both
+  steps, generating a valid code from the stored secret as an authenticator app would.
+- **Result:** Backend 85 of 85 passing, frontend 45 of 45 passing, and TypeScript reports no errors. New regression
+  tests cover 2.1, 2.3, 2.7, 2.17 and the 2FA step; each fails on the old code and passes on the new.
+- **Commits:** `7d07b89`, `382aa37`, `2b31519`, `7e95d30`, `952c215`
+
+### 2.14 "Total Jobs" counted only queued orders
+- **Problem:** The crafting history card labelled "Total Jobs" showed the number of queued orders.
+- **Fix:** It counts all orders.
+- **Commit:** `7a11f72`
+
+### 2.15 Queue counter counted paused orders
+- **Problem:** The queue's "x / 3" counter included paused orders, but the limit applies to active orders only, so
+  three active orders plus one paused showed "4 / 3".
+- **Fix:** The counter counts active orders. Paused orders are still listed.
+- **Commit:** `7a3257b`
+
+### 2.16 Crafting history showed "Unknown" for every employee
+- **Problem:** The history table read an employee name the API does not return, so every row said "Unknown" and
+  searching by employee never matched.
+- **Fix:** Names are looked up from the user list.
+- **Commit:** `bb41cf7`
+
+### 2.17 Cancelling a user edit could set their password to "************"
+- **Problem:** On the user form, typing a new password and pressing Cancel put the literal text "************" in the
+  field but left it marked as changed. Editing again and saving sent that text as the user's new password.
+- **Fix:** Cancel clears the field and its changed flag.
+- **Evidence:** New regression test; on the old code the saved password was "************".
+- **Commit:** `7e95d30`
 
 ---
 
