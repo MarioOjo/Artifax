@@ -17,9 +17,10 @@ interface CreateUsersPageProps {
   onSave: (user: Omit<User, 'id'> & { id: number | null; password?: string }) => Promise<void>;
   onDelete: (id: number) => void;
   onRequestEdit?: (id: number) => Promise<boolean>;
+  onResetTwoFactor?: (id: number) => void;
 }
 
-function CraeteUsersPage({ user, onSave, onDelete, onRequestEdit }: CreateUsersPageProps) {
+function CraeteUsersPage({ user, onSave, onDelete, onRequestEdit, onResetTwoFactor }: CreateUsersPageProps) {
   const api = useApi();
   const [fullName, setFullName] = useState('');
   const [branch, setBranch] = useState('');
@@ -370,6 +371,11 @@ function CraeteUsersPage({ user, onSave, onDelete, onRequestEdit }: CreateUsersP
                   >
                     Delete User
                   </button>
+                  {onResetTwoFactor && (
+                    <button type="button" className="createusers-secondary" onClick={() => onResetTwoFactor(user.id)}>
+                      Reset 2FA
+                    </button>
+                  )}
                 </>
               )
             ) : (

@@ -32,7 +32,15 @@ Download the **`Artifax-<version>-Setup.exe`** asset and run it. Artifax install
 The installer is not code-signed, so Windows SmartScreen may show a warning. Choose **More info → Run anyway**.
 
 ### Step 4:
-Sign in with an account created by an administrator, then set up two-factor authentication with an authenticator app. The API runs on a free tier that sleeps when idle, so the first sign-in after a quiet spell can take up to a minute.
+Sign in. To explore without an account, use the **read-only demo account**:
+
+| Email | Password |
+| --- | --- |
+| `demo@artifax.local` | `ArtifaxDemo1` |
+
+On the verification screen, choose **First time?**, scan the QR code with an authenticator app (Google Authenticator, Microsoft Authenticator, Authy...) and enter the 6-digit code. The demo account can view everything, but changes are disabled.
+
+The API runs on a free tier that sleeps when idle, so the first sign-in after a quiet spell can take up to a minute.
 
 > This repository continues the original team project. See [Portfolio changes](docs/PORTFOLIO-CHANGES.md) for everything changed since the team's final version.
 
@@ -140,7 +148,7 @@ REACT_APP_API_BASE=http://localhost:8080 npm run web   # React dev server on htt
 npm start                        # optional, in a second terminal: the Electron window, loading the dev server
 ```
 
-Open http://localhost:3000 in a browser, or use the Electron window. Sign in as `admin@artifax.local` / `ArtifaxDev1`, then set up 2FA with an authenticator app. Because this is a separate local account, it gets its own authenticator entry. `docker compose down -v` wipes the local database, and the next start seeds it again.
+Open http://localhost:3000 in a browser, or use the Electron window. Sign in as `admin@artifax.local` / `ArtifaxDev1`, or as the read-only `demo@artifax.local` / `ArtifaxDemo1`, then set up 2FA with an authenticator app. These local accounts get their own authenticator entries. `docker compose down -v` wipes the local database, and the next start seeds it again.
 
 Tests:
 

@@ -195,6 +195,22 @@ const Users: React.FC = () => {
     }
   };
 
+  // For a user who lost their authenticator: their next sign-in shows a new setup QR code
+  const handleResetTwoFactor = async (id: number) => {
+    const confirmed = window.confirm("Reset this user's two-factor authentication? Their next sign-in will show a new QR code to scan.");
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await api.patch(`/User/employee/reset-2fa?id=${encodeURIComponent(String(id))}`);
+      showSuccess('Two-factor authentication reset. The user will set it up again at their next sign-in.');
+    } catch (err) {
+      console.error('Reset 2FA failed', err);
+      showError('Unable to reset two-factor authentication. Please try again.');
+    }
+  };
+
   const handleRequestEdit = async (id: number) => {
     try {
       // Refresh users/branches from backend to ensure latest state before editing.
@@ -245,6 +261,7 @@ const Users: React.FC = () => {
               onSave={handleSaveUser}
               onDelete={handleDeleteUser}
               onRequestEdit={handleRequestEdit}
+              onResetTwoFactor={handleResetTwoFactor}
             />
           </div>
           <div className="users-panel">

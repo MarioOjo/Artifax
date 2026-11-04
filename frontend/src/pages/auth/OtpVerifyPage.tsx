@@ -20,6 +20,7 @@ function OtpVerifyPage() {
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [qrUri, setQrUri] = useState<string | null>(null);
+  const [setupUnavailable, setSetupUnavailable] = useState(false);
   const [hasApp, setHasApp] = useState(true);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -33,7 +34,9 @@ function OtpVerifyPage() {
         setQrUri(_data.qrCodeUri);
       }
     } catch (error) {
+      // 403 once 2FA is already set up for the account: the code must come from the existing authenticator
       console.error('Failed to load 2FA setup code', error);
+      setSetupUnavailable(true);
     }
   }
 
@@ -194,10 +197,20 @@ function OtpVerifyPage() {
                 <p onClick={() => setHasApp(false)} className='mb-5 underline hover:cursor-pointer w-fit text-primary-dark'>First time?</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: '10px' }}>Scan this code to configure your Google Authenticator profile:</p>
-                  <div style={{ padding: '10px', background: 'white', borderRadius: '8px' }}>
-                    <QRCodeCanvas value={qrUri || ''} size={160} />
-                  </div>
+                  {qrUri ? (
+                    <>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: '10px' }}>Scan this code to configure your Google Authenticator profile:</p>
+                      <div style={{ padding: '10px', background: 'white', borderRadius: '8px' }}>
+                        <QRCodeCanvas value={qrUri} size={160} />
+                      </div>
+                    </>
+                  ) : (
+                    <p style={{ fontSize: '0.8rem', color: 'var(--muted)', textAlign: 'center', maxWidth: '260px' }}>
+                      {setupUnavailable
+                        ? 'Two-factor authentication is already set up for this account. Use the code from your authenticator app. If you have lost access to it, ask an administrator.'
+                        : 'Loading setup code...'}
+                    </p>
+                  )}
                 </div>
               )}
 

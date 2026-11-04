@@ -89,6 +89,7 @@ function Sidebar() {
   const userRole =
     sessionUser?.UserLevel ?? sessionUser?.userLevel ?? currentUser?.role ?? MENU_DATA.user.role;
   const isAdmin = userRole?.toString().toLowerCase() === 'admin';
+  const isDemo = userRole?.toString().toLowerCase() === 'demo';
 
   const handleLogout = async () => {
     try {
@@ -118,6 +119,7 @@ function Sidebar() {
       <div className="sidebar-content">
         <SidebarNavGroup title="MAIN MENU" items={MENU_DATA.mainMenu} />
         {isAdmin && <SidebarNavGroup title="ADMIN" items={MENU_DATA.adminMenu} />}
+        {isDemo && <SidebarNavGroup title="EXPLORE" items={MENU_DATA.adminMenu.filter((item) => item.id === 'analytics')} />}
       </div>
 
       <div className="sidebar-footer">

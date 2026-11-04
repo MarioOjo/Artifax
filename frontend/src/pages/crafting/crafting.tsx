@@ -312,7 +312,8 @@ const Crafting: FC = () => {
     } catch (error) {
       console.error('Failed to create craft order', error);
       // 409: the server found too few materials (or stock changed mid-save) and changed nothing
-      const data = (error as any)?.response?.status === 409 ? (error as any).response.data : null;
+      const status = (error as any)?.response?.status;
+      const data = status === 409 || status === 403 ? (error as any).response.data : null;
       if (data?.shortages?.length) {
         const details = data.shortages
           .map((s: any) => `${s.itemName}: need ${s.required}, have ${s.available}`)
