@@ -125,7 +125,7 @@ const CraftingQueue: FC = () => {
             name: order.itemName || `Order ${order.orderID}`,
             qty: order.quantity ?? 1,
             status,
-            progress: calculateProgress(order.totalTime, order.timeElapsed, expedited),
+            progress: calculateProgress(order.totalTime, order.timeElapsed),
             timeLeft: formatTimeLeft(order.totalTime, order.timeElapsed, expedited),
             materials: [order.itemName || `Item ${order.itemID}`],
             employeeName: employees[order.employeeID ?? 0] ?? 'Unknown Employee',
