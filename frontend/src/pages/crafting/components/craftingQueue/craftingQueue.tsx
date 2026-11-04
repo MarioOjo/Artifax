@@ -172,7 +172,8 @@ const CraftingQueue: FC = () => {
   const pageItems = page > 1
     ? queuedJobs.slice((page - 2) * itemsPerPage, (page - 1) * itemsPerPage)
     : [];
-  const activeCount = activeJobs.length;
+  // The 3-order limit applies to Active orders only; paused orders are listed but do not take a slot
+  const activeCount = activeJobs.filter((job) => job.status === 'Active').length;
 
   const handlePrevious = (): void => setPage((prev) => Math.max(1, prev - 1));
   const handleNext = (): void => setPage((prev) => Math.min(totalPages, prev + 1));
