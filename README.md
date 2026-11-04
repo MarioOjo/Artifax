@@ -22,16 +22,18 @@ The core objective of the system is to deliver a highly scalable backend archite
 
 
 ### Step 1:
-Go to the [Artifax Releases](https://github.com/I-Know-What-You-Committed-Last-Summer/Artifax/releases) page on GitHub and select the **latest version**.
+Go to the [latest Artifax release](https://github.com/MarioOjo/Artifax/releases/latest) on GitHub.
 
 ### Step 2:
-Download the **`Artifax-win32-x64.zip`** asset.
+Download the **`Artifax-<version>-Setup.exe`** asset and run it. Artifax installs, adds Start-menu and desktop shortcuts, and opens.
 
 ### Step 3:
-Extract (unzip) the contents of the downloaded ZIP file to your preferred directory.
+The installer is not code-signed, so Windows SmartScreen may show a warning. Choose **More info → Run anyway**.
 
 ### Step 4:
-Open the extracted folder and run **`Artifax.exe`** to launch the application.
+Sign in with an account created by an administrator, then set up two-factor authentication with an authenticator app. The API runs on a free tier that sleeps when idle, so the first sign-in after a quiet spell can take up to a minute.
+
+> This repository continues the original team project. See [Portfolio changes](docs/PORTFOLIO-CHANGES.md) for everything changed since the team's final version.
 
 
 </tr>
