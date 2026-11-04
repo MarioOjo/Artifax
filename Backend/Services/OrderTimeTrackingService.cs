@@ -44,7 +44,8 @@ namespace Artifax.Services
             logger.LogInformation("OrderTimeTrackingService stopped.");
         }
 
-        private async Task ProcessOrdersAsync(CancellationToken stoppingToken)
+        // internal so Backend.Tests can run a single processing pass without the timer loop
+        internal async Task ProcessOrdersAsync(CancellationToken stoppingToken)
         {
             using (var scope = serviceProvider.CreateScope())
             {
@@ -124,26 +125,29 @@ namespace Artifax.Services
                         .Where(o => o.BranchID == branch.BranchID && o.Status == "Active")
                         .CountAsync(stoppingToken);
 
-                    // If less than 3 active, activate oldest queued order
-                    while (activeCount < 3)
+                    // Fill the free slots with the oldest queued orders. They are fetched in one query because
+                    // status changes are only saved after the loop, so re-querying would return the same order.
+                    int freeSlots = 3 - activeCount;
+                    if (freeSlots <= 0)
+                        continue;
+
+                    var queuedOrders = await context.Orders
+                        .Where(o => o.BranchID == branch.BranchID && o.Status == "Queued")
+                        .OrderBy(o => o.CreatedDateTime)
+                        .Take(freeSlots)
+                        .ToListAsync(stoppingToken);
+
+                    foreach (var queuedOrder in queuedOrders)
                     {
-                        var oldestQueuedOrder = await context.Orders
-                            .Where(o => o.BranchID == branch.BranchID && o.Status == "Queued")
-                            .OrderBy(o => o.CreatedDateTime)
-                            .FirstOrDefaultAsync(stoppingToken);
+                        queuedOrder.Status = "Active";
+                        queuedOrder.StartedDateTime = DateTime.UtcNow;
 
-                        if (oldestQueuedOrder == null)
-                            break; // No queued orders left
-
-                        oldestQueuedOrder.Status = "Active";
-                        oldestQueuedOrder.StartedDateTime = DateTime.UtcNow;
-
-                        logger.LogInformation($"Order {oldestQueuedOrder.OrderID} activated from Queued status. Branch: {branch.BranchID}");
+                        logger.LogInformation($"Order {queuedOrder.OrderID} activated from Queued status. Branch: {branch.BranchID}");
 
                         // Create history entry for activation
                         var activationHistory = new OrderHistory
                         {
-                            OrderID = oldestQueuedOrder.OrderID,
+                            OrderID = queuedOrder.OrderID,
                             PreviousStatus = "Queued",
                             NewStatus = "Active",
                             ChangedDateTime = DateTime.UtcNow,
@@ -151,8 +155,6 @@ namespace Artifax.Services
                             ChangeReason = "Auto-activated by background service (branch had < 3 active orders)"
                         };
                         context.OrderHistories.Add(activationHistory);
-
-                        activeCount++;
                     }
                 }
 

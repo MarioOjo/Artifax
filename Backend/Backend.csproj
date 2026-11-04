@@ -27,4 +27,8 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.5" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Backend.Tests" />
+  </ItemGroup>
+
 </Project>
