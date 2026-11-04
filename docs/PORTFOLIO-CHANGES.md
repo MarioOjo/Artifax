@@ -329,7 +329,8 @@ design changes rather than small fixes:
 - **Problem:** Nothing ran the tests automatically. There was no way to tell which commit was deployed, or whether
   the API could reach its database.
 - **Change:**
-  - A GitHub Actions workflow runs on every pull request and push to `main`:
+  - A GitHub Actions workflow (currently run manually, because Actions is unavailable on this account until a
+    billing issue is resolved):
     - backend: build plus every test, including the real-PostgreSQL ones;
     - frontend: clean install, type check and tests;
     - Docker image: builds the image Render deploys.

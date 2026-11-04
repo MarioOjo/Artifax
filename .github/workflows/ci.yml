@@ -1,9 +1,12 @@
 name: CI
 
+# Manual for now: GitHub Actions is unavailable on this account until a billing issue is resolved.
+# To run on every change again, replace workflow_dispatch with:
+#   pull_request:
+#   push:
+#     branches: [main]
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   backend:
