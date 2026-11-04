@@ -10,7 +10,7 @@ Each entry says what was wrong, why it mattered, what changed, and the commit th
 | --- | --- |
 | [1. Running on new infrastructure](#1-running-on-new-infrastructure) | 6 |
 | [2. Bug fixes from a code review](#2-bug-fixes-from-a-code-review) | 17 |
-| [3. Enhancement: secure, transactional crafting](#3-enhancement-secure-transactional-crafting) | in progress |
+| [3. Enhancement: secure, transactional crafting](#3-enhancement-secure-transactional-crafting) | 5 |
 | [4. Known issues](#4-known-issues) | — |
 
 ---
@@ -227,8 +227,8 @@ Items 2.14 to 2.17 were found while bringing the tests up to date.
 
 ## 3. Enhancement: secure, transactional crafting
 
-In progress on the `feature/secure-crafting` branch. It addresses the three most serious review findings, which
-need design changes rather than small fixes:
+Built on the `feature/secure-crafting` branch. It addresses the three most serious review findings, which needed
+design changes rather than small fixes:
 
 - **Open API:** item, stock and order endpoints work without logging in.
 - **Destructive deletes:** deleting an item or employee also deletes its orders, history and other products' recipe
@@ -324,6 +324,24 @@ need design changes rather than small fixes:
 - **Limitation:** Orders placed before this change have no recorded materials, so cancelling one returns nothing.
 - **Deploy note:** Apply the `RecordOrderMaterials` migration to the hosted database before deploying this code.
 - **Commits:** `5659517`, `f64bf99`, `2ea05f6`
+
+### 3.5 CI and a health endpoint
+- **Problem:** Nothing ran the tests automatically. There was no way to tell which commit was deployed, or whether
+  the API could reach its database.
+- **Change:**
+  - A GitHub Actions workflow runs on every pull request and push to `main`:
+    - backend: build plus every test, including the real-PostgreSQL ones;
+    - frontend: clean install, type check and tests;
+    - Docker image: builds the image Render deploys.
+  - `GET /health` is public and reports the deployed commit (from Render's `RENDER_GIT_COMMIT`) and whether the
+    database is reachable. It returns 200 whenever the API runs, so a sleeping free-tier database does not make
+    Render restart a healthy API.
+- **Found along the way:** `npm ci` failed on Linux. The lock file was written by npm 11, and the npm 10 bundled
+  with Node 22 rejects its handling of an optional peer dependency. CI pins npm 11.5.2 to match.
+- **Evidence:** Before pushing, every CI step was run in Linux containers, which have case-sensitive paths. The
+  frontend passed 49 of 49 with a clean type check, and the backend built and passed its non-Docker tests. Backend
+  116 of 116 passing locally.
+- **Commits:** `8edf764`, `259aa7f`
 
 ---
 
