@@ -91,11 +91,7 @@ const CraftingQueue: FC = () => {
           return map;
         }, {});
 
-        const allowedBranchIds = currentUser?.branchId === 3
-          ? []
-          : currentUser?.branchId != null
-            ? [currentUser.branchId]
-            : [];
+        const allowedBranchIds = currentUser?.branchId != null ? [currentUser.branchId] : [];
 
         const orders = ordersResponse.data
           .slice()

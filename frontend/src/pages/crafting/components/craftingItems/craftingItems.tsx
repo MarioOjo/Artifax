@@ -95,11 +95,7 @@ const CraftingItems: FC = () => {
         return map;
       }, {});
 
-      const allowedBranchIds = currentUser?.branchId === 3
-        ? []
-        : currentUser?.branchId != null
-          ? [currentUser.branchId]
-          : [];
+      const allowedBranchIds = currentUser?.branchId != null ? [currentUser.branchId] : [];
 
       const sortedOrders = ordersResponse.data
         .slice()
