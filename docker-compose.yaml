@@ -45,6 +45,8 @@ services:
       Database__SeedDemoData: "true"
       Database__DevAdminEmail: ${ARTIFAX_DEV_ADMIN_EMAIL:-admin@artifax.local}
       Database__DevAdminPassword: ${ARTIFAX_DEV_ADMIN_PASSWORD:-ArtifaxDev1}
+      Database__DemoEmail: demo@artifax.local
+      Database__DemoPassword: ArtifaxDemo1
 
 volumes:
   db-data:

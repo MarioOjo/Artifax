@@ -76,8 +76,13 @@ builder.Services.AddAuthentication(SessionAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>(SessionAuthenticationHandler.SchemeName, null);
 builder.Services.AddAuthorization(options =>
 {
-    options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .AddRequirements(new ReadOnlyDemoRequirement())   // the demo role can read but not change anything
+        .Build();
 });
+builder.Services.AddSingleton<IAuthorizationHandler, ReadOnlyDemoHandler>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, ReadOnlyDemoResultHandler>();
 
 var app = builder.Build();
 
