@@ -34,6 +34,9 @@ namespace Backend.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
                     b.HasKey("BranchID");
 
                     b.ToTable("Branches");
@@ -88,6 +91,9 @@ namespace Backend.Migrations
                     b.Property<string>("EmployeePasswordHash")
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("TwoFactorSecret")
                         .HasColumnType("text");
 
@@ -105,6 +111,9 @@ namespace Backend.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ItemID"));
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("ItemCategory")
                         .HasColumnType("text");
@@ -271,7 +280,7 @@ namespace Backend.Migrations
                     b.HasOne("Artifax.Models.Branch", "Branch")
                         .WithMany("Employees")
                         .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Branch");
@@ -282,7 +291,7 @@ namespace Backend.Migrations
                     b.HasOne("Artifax.Models.Item", "IngredientItem")
                         .WithMany("IngredientItemIngredients")
                         .HasForeignKey("IngredientID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Artifax.Models.Item", "ProductItem")
@@ -301,19 +310,19 @@ namespace Backend.Migrations
                     b.HasOne("Artifax.Models.Branch", "Branch")
                         .WithMany("Orders")
                         .HasForeignKey("BranchID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Artifax.Models.Employee", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Artifax.Models.Item", "Item")
                         .WithMany()
                         .HasForeignKey("ItemID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Branch");

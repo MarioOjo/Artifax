@@ -122,12 +122,12 @@ namespace Backend.Tests
             Assert.Equal(90, updatedItem.ProductionTime);
         }
         [Fact]
-        public async Task DeleteItem_ExistingItem_ReturnsNoContent()
+        public async Task DeleteItem_ExistingItem_ArchivesItAndHidesItFromTheList()
         {
             // ARRANGE
             var options = GetDbContextOptions();
             using var context = new ArtifaxContext(options);
-            
+
             var existingItem = new Item { ItemID = 1, ItemName = "Iron Sword", ItemCategory = "Weapon", ProductionTime = 120 };
             context.Items.Add(existingItem);
             await context.SaveChangesAsync();
@@ -137,9 +137,10 @@ namespace Backend.Tests
             // ACT
             var result = await controller.DeleteItem(1);
 
-            // ASSERT
+            // ASSERT: the row stays (orders may refer to it) but is archived and no longer listed
             Assert.IsType<NoContentResult>(result);
-            Assert.Equal(0, await context.Items.CountAsync()); 
+            Assert.True((await context.Items.SingleAsync()).IsArchived);
+            Assert.Empty((await controller.GetAllItems()).Value!);
         }
         [Fact]
         public async Task DeleteItem_NonExistingItem_ReturnsNoContent()

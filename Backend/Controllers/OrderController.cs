@@ -146,16 +146,22 @@ namespace Artifax.Controllers
             var item = await context.Items.FindAsync(newOrderDto.ItemID);
             if (item == null)
                 return BadRequest($"Item with ID {newOrderDto.ItemID} does not exist.");
+            if (item.IsArchived)
+                return BadRequest($"Item '{item.ItemName}' is archived and cannot be ordered.");
 
             // Validate that the branch exists in the database
             var branch = await context.Branches.FindAsync(newOrderDto.BranchID);
             if (branch == null)
                 return BadRequest($"Branch with ID {newOrderDto.BranchID} does not exist.");
+            if (branch.IsArchived)
+                return BadRequest($"Branch '{branch.BranchName}' is archived and cannot take orders.");
 
             // Validate that the employee exists in the database
             var employee = await context.Employees.FindAsync(newOrderDto.EmployeeID);
             if (employee == null)
                 return BadRequest($"Employee with ID {newOrderDto.EmployeeID} does not exist.");
+            if (employee.IsArchived)
+                return BadRequest($"Employee with ID {newOrderDto.EmployeeID} is archived.");
 
             // Calculate total production time
             int totalTime = newOrderDto.Quantity * item.ProductionTime;

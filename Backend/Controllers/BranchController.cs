@@ -23,7 +23,7 @@ namespace Artifax.Controllers
             [HttpGet]
             public async Task<ActionResult<IEnumerable<BranchDto>>> GetAll ()
             {
-                return await context.Branches.Select(_branch => BranchDto.ToDto(_branch)).ToListAsync();
+                return await context.Branches.Where(_branch => !_branch.IsArchived).Select(_branch => BranchDto.ToDto(_branch)).ToListAsync();
             }
 
             [HttpGet("{id}")]
@@ -92,7 +92,8 @@ namespace Artifax.Controllers
                 var _result = await context.Branches.FindAsync(id);
                 if (_result == null) return NotFound();
 
-                context.Branches.Remove(_result);
+                // Archive rather than delete: the branch's employees, stock and orders stay intact
+                _result.IsArchived = true;
                 await context.SaveChangesAsync();
 
                 return NoContent();

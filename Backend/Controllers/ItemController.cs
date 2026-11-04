@@ -22,7 +22,7 @@ namespace Artifax.Controllers
         [HttpGet("item/")]
         public async Task<ActionResult<IEnumerable<ItemReadDto>>> GetAllItems()
         {
-            return await _context.Items.Select(i => ItemReadDto.ToDto(i)).ToListAsync();
+            return await _context.Items.Where(i => !i.IsArchived).Select(i => ItemReadDto.ToDto(i)).ToListAsync();
         }
         [HttpGet("item/{id}")]
         public async Task<ActionResult<ItemReadDto>> GetItem(int id)
@@ -69,7 +69,7 @@ namespace Artifax.Controllers
             };
             _context.Items.Add(_item);
             await _context.SaveChangesAsync();
-            var branches = await _context.Branches.ToListAsync();
+            var branches = await _context.Branches.Where(b => !b.IsArchived).ToListAsync();
             foreach (var branch in branches)
             {
                 var defaultCapacity = new BranchItemCapacity()
@@ -105,6 +105,7 @@ namespace Artifax.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
+        // Archives rather than deletes: the item leaves every list, but orders and their history keep it
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteItem(int id)
         {
@@ -113,7 +114,7 @@ namespace Artifax.Controllers
             {
                 return NotFound();
             }
-            _context.Items.Remove(_item);
+            _item.IsArchived = true;
             await _context.SaveChangesAsync();
             return NoContent();
         }
@@ -124,7 +125,7 @@ namespace Artifax.Controllers
         public async Task<ActionResult<IEnumerable<ItemBlueprintReadDto>>> GetAllItemsWithIngredients()
         {
             var itemsWithIngredients = await _context.ItemIngredients
-                .Join(_context.Items, ig => ig.ProductID, i => i.ItemID, (ig, i) => new { Item = i, Ingredient = ig })
+                .Join(_context.Items.Where(i => !i.IsArchived), ig => ig.ProductID, i => i.ItemID, (ig, i) => new { Item = i, Ingredient = ig })
                 .GroupBy(x => x.Item)
                 .Select(g => new ItemBlueprintReadDto
                 {
@@ -148,8 +149,8 @@ namespace Artifax.Controllers
         public async Task<ActionResult<IEnumerable<InventoryItemReadDto>>> GetAllInventoryItems()
         {
             var inventoryItems = await _context.BranchItemCapacities
-                .Join(_context.Items, c => c.ItemID, i => i.ItemID, (c, i) => new { Capacity = c, Item = i })
-                .Join(_context.Branches, x => x.Capacity.BranchID, b => b.BranchID, (x, b) => new { x.Capacity, x.Item, Branch = b })
+                .Join(_context.Items.Where(i => !i.IsArchived), c => c.ItemID, i => i.ItemID, (c, i) => new { Capacity = c, Item = i })
+                .Join(_context.Branches.Where(b => !b.IsArchived), x => x.Capacity.BranchID, b => b.BranchID, (x, b) => new { x.Capacity, x.Item, Branch = b })
                 .Select(x => new InventoryItemReadDto(x.Item, x.Branch, x.Capacity))
                 .ToListAsync();
             return inventoryItems;
