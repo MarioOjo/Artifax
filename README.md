@@ -1,5 +1,7 @@
 ![Artifax](frontend/src/assets/ReadmeImg/Artifax.png)
 
+[![CI](https://github.com/MarioOjo/Artifax/actions/workflows/ci.yml/badge.svg)](https://github.com/MarioOjo/Artifax/actions/workflows/ci.yml)
+
 ### Table Of Contents
 - [Overview](#overview)
 - [Installation](#installation)

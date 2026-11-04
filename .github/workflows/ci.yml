@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend build and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore Backend.Tests/Backend.Tests.csproj
+      - name: Build
+        run: dotnet build Backend.Tests/Backend.Tests.csproj --no-restore
+      # Includes the real-PostgreSQL tests: Testcontainers uses the runner's Docker
+      - name: Test
+        run: dotnet test Backend.Tests/Backend.Tests.csproj --no-build --logger "console;verbosity=normal"
+
+  frontend:
+    name: Frontend type check and tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      # The Electron binary is not needed to type-check or test the React app
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      # The lock file is written by npm 11; npm 10 (bundled with Node 22) rejects its handling of an
+      # optional peer dependency (yaml for Tailwind's postcss-load-config), so match the npm that wrote it
+      - run: npm install -g npm@11.5.2
+      - run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit -p .
+      - name: Test
+        run: npx react-scripts test --watchAll=false
+        env:
+          CI: "true"
+
+  docker-image:
+    name: Production Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The same Dockerfile and build context Render uses
+      - run: docker build ./Backend
