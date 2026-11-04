@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Crafting from './crafting';
 import { useApi } from '../../hooks';
 import { getInventoryOverview } from '../../services/inventoryApi';
+import { showError, showSuccess } from '../../utils/toast';
 
 jest.mock('../../hooks', () => ({
   useApi: jest.fn(),
@@ -11,6 +12,11 @@ jest.mock('../../hooks', () => ({
 
 jest.mock('../../services/inventoryApi', () => ({
   getInventoryOverview: jest.fn(),
+}));
+
+jest.mock('../../utils/toast', () => ({
+  showSuccess: jest.fn(),
+  showError: jest.fn(),
 }));
 
 const mockedUseApi = useApi as jest.MockedFunction<typeof useApi>;
@@ -120,10 +126,13 @@ jest.mock('./components/newBlueprint/newBlueprint', () => ({
 }));
 
 describe('Crafting page', () => {
+  let api: { get: jest.Mock; post: jest.Mock; put: jest.Mock; delete: jest.Mock };
+
   beforeEach(() => {
     const get = jest.fn((url: string) =>
       url in apiResponses ? Promise.resolve({ data: apiResponses[url] }) : Promise.reject(new Error(`Unexpected GET ${url}`)));
-    mockedUseApi.mockReturnValue({ get, post: jest.fn(), put: jest.fn(), delete: jest.fn() } as any);
+    api = { get, post: jest.fn(), put: jest.fn(), delete: jest.fn() };
+    mockedUseApi.mockReturnValue(api as any);
     (getInventoryOverview as jest.Mock).mockResolvedValue({ alerts: [] });
   });
 
@@ -153,5 +162,38 @@ describe('Crafting page', () => {
 
     fireEvent.click(screen.getByText('History'));
     expect(screen.getByText(/HistoryPanel stub/i)).toBeInTheDocument();
+  });
+
+  const openCraftPanel = async (): Promise<void> => {
+    render(<Crafting />);
+    fireEvent.click(screen.getAllByText('Craft')[0]);
+    fireEvent.click(screen.getByText('Select blueprint'));
+    await waitFor(() => expect(screen.getByText('Round Table')).toBeInTheDocument());
+  };
+
+  it('places the order and leaves stock changes to the server', async () => {
+    api.post.mockResolvedValue({ data: { orderID: 1 } });
+    await openCraftPanel();
+
+    fireEvent.click(screen.getAllByText('Craft')[1]);
+
+    await waitFor(() => expect(showSuccess).toHaveBeenCalled());
+    expect(api.post).toHaveBeenCalledWith('/Order/create', expect.objectContaining({ itemID: 101, quantity: 1 }));
+    expect(api.put).not.toHaveBeenCalled();
+  });
+
+  it('shows which materials are short when the server rejects the order', async () => {
+    api.post.mockRejectedValue({
+      response: {
+        status: 409,
+        data: { message: 'Not enough materials at this branch.', shortages: [{ itemName: 'Iron Ingot', required: 10, available: 4 }] },
+      },
+    });
+    await openCraftPanel();
+
+    fireEvent.click(screen.getAllByText('Craft')[1]);
+
+    await waitFor(() => expect(showError).toHaveBeenCalledWith(expect.stringContaining('Iron Ingot: need 10, have 4')));
+    expect(api.put).not.toHaveBeenCalled();
   });
 });

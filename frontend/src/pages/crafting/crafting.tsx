@@ -294,6 +294,8 @@ const Crafting: FC = () => {
       const branchID = currentUser?.branchId ?? 1;
       const employeeID = currentUser?.employeeId ?? 1;
 
+      // The server checks and takes the materials in the same save as the order,
+      // so there is no separate stock update here
       await api.post('/Order/create', {
         itemID: itemId,
         quantity: amount,
@@ -302,56 +304,25 @@ const Crafting: FC = () => {
         orderExpedite,
       });
 
-      const branchItemsResp = await api.get(`/Item/Branch/${branchID}`);
-      const branchItems = branchItemsResp.data;
-
-      const branchQuantityByItemId = branchItems.reduce((map: Record<number, number>, bic: any) => {
-        const id = bic.ItemID ?? bic.itemID ?? bic.itemId ?? 0;
-        if (!id) return map;
-        map[id] = (map[id] || 0) + (bic.ItemQuantity || bic.itemQuantity || 0);
-        return map;
-      }, {} as Record<number, number>);
-
-      const updateResults = await Promise.allSettled(
-        selectedBlueprint.materials.map(async (material) => {
-          const materialItemId = material.itemId;
-          if (!materialItemId) {
-            return;
-          }
-
-          const currentMaterialQuantity = branchQuantityByItemId[materialItemId] ?? 0;
-          const updatedQuantity = Math.max(0, currentMaterialQuantity - (material.need * amount));
-          await api.put(
-            `/Item/Branch/${branchID}/Item/${materialItemId}`,
-            null,
-            { params: { quantity: updatedQuantity } },
-          );
-        }),
-      );
-
-      const failedUpdates = updateResults.filter((result) => result.status === 'rejected');
-      if (failedUpdates.length > 0) {
-        console.error('Some branch inventory updates failed', failedUpdates);
-        showError('Craft order created, but updating some branch item quantities failed.');
-      } else {
-        showSuccess('Craft order submitted successfully and inventory updated.');
-      }
-
+      showSuccess('Craft order placed. Materials were taken from branch stock.');
+      window.dispatchEvent(new CustomEvent('crafting-order-updated'));
       setBlueprintRefreshKey((prev) => prev + 1);
-
-      setSelectedBlueprint((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          materials: prev.materials.map((material) => ({
-            ...material,
-            have: Math.max(0, material.have - (material.need * amount)),
-          })),
-        };
-      });
+      // Reload the blueprint so the "have" counts come from the server
+      await handleSelectBlueprint(selectedBlueprintId);
     } catch (error) {
       console.error('Failed to create craft order', error);
-      showError('Unable to place craft order. Please try again.');
+      // 409: the server found too few materials (or stock changed mid-save) and changed nothing
+      const data = (error as any)?.response?.status === 409 ? (error as any).response.data : null;
+      if (data?.shortages?.length) {
+        const details = data.shortages
+          .map((s: any) => `${s.itemName}: need ${s.required}, have ${s.available}`)
+          .join('; ');
+        showError(`Not enough materials at this branch. ${details}`);
+      } else if (data?.message) {
+        showError(data.message);
+      } else {
+        showError('Unable to place craft order. Please try again.');
+      }
     }
   };
 
