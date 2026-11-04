@@ -8,7 +8,7 @@ Each entry says what was wrong, why it mattered, what changed, and the commit th
 
 | Area | Changes |
 | --- | --- |
-| [1. Running on new infrastructure](#1-running-on-new-infrastructure) | 6 |
+| [1. Running on new infrastructure](#1-running-on-new-infrastructure) | 7 |
 | [2. Bug fixes from a code review](#2-bug-fixes-from-a-code-review) | 17 |
 | [3. Enhancement: secure, transactional crafting](#3-enhancement-secure-transactional-crafting) | 5 |
 | [4. Known issues](#4-known-issues) | — |
@@ -69,6 +69,15 @@ Getting it running surfaced these problems.
   its SHA-256 checksum. The README install steps now link to this repository's latest release and cover the
   SmartScreen prompt, sign-in with 2FA and the free-tier cold start.
 - **Commits:** release built from `1fbaeb4`; README `453ac4e`
+
+### 1.7 Release v0.2.0: the enhancement
+- **What:** [v0.2.0](https://github.com/MarioOjo/Artifax/releases/tag/v0.2.0) ships the enhancement in section 3 to
+  the desktop app: server-side crafting stock with shortage messages, and confirmations that say what removing a
+  user or blueprint keeps.
+- **Deployment order:** The two new database migrations were applied to the hosted database first, while the
+  previous API version kept working on the new schema. The code was merged after that. `/health` then reported
+  the merge commit (`1490e8c`) with the database reachable, and anonymous API requests returned 401.
+- **Why the version bump:** The Windows installer (Squirrel) only updates an existing install to a higher version.
 
 ---
 
