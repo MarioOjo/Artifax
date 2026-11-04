@@ -333,7 +333,9 @@ function CraeteUsersPage({ user, onSave, onDelete, onRequestEdit }: CreateUsersP
                         setFullName(user.name);
                         setBranch(user.branch);
                         setEmail(user.email);
-                        setPassword('************');
+                        // Discard any typed password; leaving it "dirty" would send it on the next save
+                        setPassword('');
+                        setPasswordDirty(false);
                         setRole(user.role);
                         setShowPassword(false);
                       }

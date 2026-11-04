@@ -55,7 +55,8 @@ describe('CraeteUsersPage', () => {
       });
     });
 
-    expect(window.localStorage.getItem('artifax.currentUser')).toContain('Alice Walker');
+    // Creating another user must not change who is logged in
+    expect(window.localStorage.getItem('artifax.currentUser')).toBeNull();
   });
 
   it('shows validation errors for invalid email and password', async () => {
@@ -105,13 +106,41 @@ describe('CraeteUsersPage', () => {
     expect(screen.getByRole('button', { name: /Edit/i })).toBeInTheDocument();
     const deleteButton = screen.getByRole('button', { name: /Delete User/i });
     expect(deleteButton).toBeInTheDocument();
-    expect(screen.getByDisplayValue('************')).toHaveAttribute('type', 'password');
+
+    // An existing user's password is never shown; the field is empty with a masked placeholder
+    const passwordInput = screen.getByPlaceholderText('••••••••••••');
+    expect(passwordInput).toHaveValue('');
+    expect(passwordInput).toHaveAttribute('type', 'password');
 
     fireEvent.click(deleteButton);
     expect(onDelete).toHaveBeenCalledWith(5);
 
     fireEvent.click(screen.getByRole('button', { name: /Edit/i }));
+    await waitFor(() => expect(passwordInput).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: /Show password/i }));
-    expect(screen.getByDisplayValue('************')).toHaveAttribute('type', 'text');
+    expect(passwordInput).toHaveAttribute('type', 'text');
+  });
+
+  it('does not send a discarded password after cancelling an edit', async () => {
+    const onSave = jest.fn().mockResolvedValue(undefined);
+    setupApiMock();
+
+    const user = { id: 5, name: 'Existing User', email: 'existing@example.com', branch: '1', role: 'Employee', status: 'Active' };
+    render(<CraeteUsersPage user={user} onSave={onSave} onDelete={jest.fn()} />);
+    await waitFor(() => expect(useApi).toHaveBeenCalled());
+
+    // Edit, type a new password, then cancel
+    fireEvent.click(screen.getByRole('button', { name: /Edit/i }));
+    const passwordInput = await screen.findByPlaceholderText('••••••••••••');
+    await waitFor(() => expect(passwordInput).toBeEnabled());
+    fireEvent.change(passwordInput, { target: { value: 'newpass1' } });
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
+
+    // Edit again and save without touching the password
+    fireEvent.click(screen.getByRole('button', { name: /Edit/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /Save Changes/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][0].password).toBeUndefined();
   });
 });
