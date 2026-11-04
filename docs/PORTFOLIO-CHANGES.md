@@ -8,9 +8,9 @@ Each entry says what was wrong, why it mattered, what changed, and the commit th
 
 | Area | Changes |
 | --- | --- |
-| [1. Running on new infrastructure](#1-running-on-new-infrastructure) | 5 |
+| [1. Running on new infrastructure](#1-running-on-new-infrastructure) | 6 |
 | [2. Bug fixes from a code review](#2-bug-fixes-from-a-code-review) | 17 |
-| [3. Enhancement: secure, transactional crafting](#3-enhancement-secure-transactional-crafting) | planned |
+| [3. Enhancement: secure, transactional crafting](#3-enhancement-secure-transactional-crafting) | in progress |
 | [4. Known issues](#4-known-issues) | — |
 
 ---
@@ -61,6 +61,14 @@ Getting it running surfaced these problems.
 - **Result:** `app.asar` went from 266 MB to 4.5 MB, and the installer from 200 MB to 145 MB. The rest is the
   Electron runtime, which every Electron app ships. The packaged app was launched to confirm it starts.
 - **Commit:** `f6faa56`
+
+### 1.6 First release from this repository
+- **Problem:** The README sent people to the team's releases page, and described a zip download that the current
+  build does not produce.
+- **Fix:** Published [v0.1.0](https://github.com/MarioOjo/Artifax/releases/tag/v0.1.0) with the trimmed installer and
+  its SHA-256 checksum. The README install steps now link to this repository's latest release and cover the
+  SmartScreen prompt, sign-in with 2FA and the free-tier cold start.
+- **Commits:** release built from `1fbaeb4`; README `453ac4e`
 
 ---
 
@@ -219,13 +227,27 @@ Items 2.14 to 2.17 were found while bringing the tests up to date.
 
 ## 3. Enhancement: secure, transactional crafting
 
-Planned. It addresses the three most serious review findings, which need design changes rather than small fixes:
+In progress on the `feature/secure-crafting` branch. It addresses the three most serious review findings, which
+need design changes rather than small fixes:
 
 - **Open API:** item, stock and order endpoints work without logging in.
 - **Destructive deletes:** deleting an item or employee also deletes its orders, history and other products' recipe
   lines.
 - **Client-side stock changes:** materials are deducted by the app after the order is created. The server never
   checks stock, a failure leaves the order in place, and cancelling does not return materials.
+
+### 3.1 Local Docker stack and real-database tests
+- **Why first:** The existing tests use EF Core's in-memory database, which ignores foreign keys, cascade deletes and
+  transactions, the exact behaviour this enhancement changes. Local work also used the hosted database.
+- **Change:**
+  - `docker compose up` starts PostgreSQL and the API (built from the same Dockerfile Render uses), migrated and
+    seeded with demo data and a local admin. Seeding is opt-in through settings that only the compose file sets.
+  - Testcontainers tests start a throwaway PostgreSQL 18 per run, with a fresh database per test.
+  - The old compose file only ran the API, needed a missing `.env` file and pointed at `./backend` (wrong case on
+    Linux).
+- **Evidence:** Real-database tests cover migrations on an empty database, foreign-key enforcement, and seeding
+  (running it twice creates no duplicates). Backend: 89 of 89 passing, 85 of them without Docker.
+- **Commits:** `a82865c`, `6d630e1`, `0e55fba`
 
 ---
 
