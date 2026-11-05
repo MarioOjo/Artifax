@@ -287,6 +287,13 @@ demo account (3.6).
 - **Fix:** A centred spinner in the theme's colours replaces the text. Screen readers still announce "Verifying
   session", and the spin slows down when the system asks for reduced motion.
 
+### 2.23 Notifications in the app's style
+- **Problem:** Notifications used react-toastify's stock look: a white card with grey generic sans-serif text and a
+  rainbow progress bar, in both themes. In the dark theme they were the only white element on screen.
+- **Fix:** Notifications now use the theme's surface, border, text colour and card radius, and the app's Sora font.
+  Success, error, warning and information colours were chosen for each theme so icons and progress bars stay
+  readable on light and dark surfaces. The close button follows the theme too.
+
 ---
 
 ## 3. Enhancement: secure, transactional crafting
