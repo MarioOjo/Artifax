@@ -307,6 +307,15 @@ demo account (3.6).
   Success, error, warning and information colours were chosen for each theme so icons and progress bars stay
   readable on light and dark surfaces. The close button follows the theme too.
 
+### 2.24 Dashboard and user form labels
+- **Problem:** Stock is held per branch, but the dashboard's low-stock alerts showed only the item name, so an item
+  low at three branches appeared as three identical alerts. The crafting queue's "Materials" list showed the item
+  being made rather than what it is made from. The user form kept the heading "Create User" while showing or
+  editing an existing user.
+- **Fix:** Low-stock alerts name the branch. Each job lists its recipe scaled by the order quantity (for example
+  "Gear x20"), and the section is hidden for items without a recipe. The form heading reads "Create User",
+  "User Details" or "Edit User" to match what the form is doing.
+
 ---
 
 ## 3. Enhancement: secure, transactional crafting

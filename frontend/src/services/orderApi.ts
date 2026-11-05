@@ -43,6 +43,12 @@ type BranchDto = {
   branchName: string;
 };
 
+// Shape returned by GET /api/Item/item/allItemBlueprints (only items that have a recipe)
+type BlueprintDto = {
+  itemID: number;
+  ingredients: { itemName: string; quantity: number }[];
+};
+
 type OrderStatusUpdateDto = {
   status: string;
 };
@@ -83,7 +89,17 @@ export async function getBranches(): Promise<BranchDto[]> {
 }
 
 export async function getCraftingQueue(): Promise<{ activeItems: QueueJob[]; queuedItems: QueueJob[] }> {
-  const [orders, users, branches] = await Promise.all([getOrders(), getUsers(), getBranches()]);
+  const [orders, users, branches, blueprints] = await Promise.all([
+    getOrders(),
+    getUsers(),
+    getBranches(),
+    fetchJson<BlueprintDto[]>('Item/item/allItemBlueprints'),
+  ]);
+
+  const recipeMap = (blueprints ?? []).reduce<Record<number, BlueprintDto['ingredients']>>((map, blueprint) => {
+    map[blueprint.itemID] = blueprint.ingredients ?? [];
+    return map;
+  }, {});
 
   const employeeMap = (users ?? []).reduce<Record<number, string>>((map, user: any) => {
     if (user.employeeId != null) {
@@ -110,7 +126,10 @@ export async function getCraftingQueue(): Promise<{ activeItems: QueueJob[]; que
       status,
       progress: calculateProgress(order.totalTime, order.timeElapsed),
       timeLeft: formatTimeLeft(order.totalTime, order.timeElapsed, order.orderExpedite === true),
-      materials: [order.itemName || `Item ${order.itemID}`],
+      // What the order consumes: each recipe line scaled by the order quantity
+      materials: (recipeMap[order.itemID] ?? []).map(
+        (ingredient) => `${ingredient.itemName} x${ingredient.quantity * (order.quantity ?? 1)}`,
+      ),
       employeeName: employeeMap[order.employeeID] ?? 'Unknown Employee',
       createdDateTime: order.createdDateTime,
       location: branchMap[order.branchID] ?? `Branch ${order.branchID}`,

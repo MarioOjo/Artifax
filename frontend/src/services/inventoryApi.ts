@@ -246,7 +246,8 @@ export function buildInventoryOverview(items: InventoryItem[]): InventoryOvervie
 
   tabs.push(...extraTabs);
 
-  const alerts = lowStockItems.map((item) => `${item.name} (${item.quantity} remaining)`);
+  // Stock is per branch, so name the branch or the same item reads as duplicate alerts
+  const alerts = lowStockItems.map((item) => `${item.name} · ${item.location} (${item.quantity} remaining)`);
   const totalUnits = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return {
