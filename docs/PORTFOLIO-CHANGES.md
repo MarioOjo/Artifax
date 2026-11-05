@@ -79,6 +79,15 @@ Getting it running surfaced these problems.
   the merge commit (`1490e8c`) with the database reachable, and anonymous API requests returned 401.
 - **Why the version bump:** The Windows installer (Squirrel) only updates an existing install to a higher version.
 
+### 1.8 Portable download, as the team shipped it
+- **Problem:** The team distributed a portable `Artifax-win32-x64.zip`: unzip and run `Artifax.exe`, with nothing to
+  install. The Forge config only builds the zip for macOS, so this repository's releases offered only the Setup.exe
+  installer.
+- **Fix:** The zip maker now also targets Windows, so `npm run make` produces both. The v0.3.0 zip was made from the
+  same packaged build as the v0.3.0 installer (same React bundle, version 0.3.0), and the README install steps now
+  lead with the portable download, using a link to the latest release that does not change between versions.
+- **Result:** A fresh extraction of the zip into an empty folder launched the app.
+
 ---
 
 ## 2. Bug fixes from a code review

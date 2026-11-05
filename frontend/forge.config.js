@@ -27,8 +27,9 @@ module.exports = {
       config: {authors: 'I know what you committed last summer', description: 'Artifax, a streamlined and scalable inventory management system designed to efficiently track internal warehouse operations and production across multiple locations.'},
     },
     {
+      // Portable Windows build: unzip and run Artifax.exe, nothing to install
       name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
+      platforms: ['darwin', 'win32'],
     },
     {
       name: '@electron-forge/maker-deb',
