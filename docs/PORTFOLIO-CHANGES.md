@@ -88,6 +88,13 @@ Getting it running surfaced these problems.
   lead with the portable download, using a link to the latest release that does not change between versions.
 - **Result:** A fresh extraction of the zip into an empty folder launched the app.
 
+### 1.9 Release v0.3.1: polish
+- **What:** v0.3.1 ships the interface fixes in 2.22 to 2.25 to the desktop app: the session spinner, themed
+  notifications and confirmation dialogs, and the dashboard and user form fixes. The fix in 2.26 is server-side and
+  was already live for every version of the app.
+- **Downloads:** The first release built with the Windows zip maker, so `npm run make` produced the portable zip and
+  the installer from one build.
+
 ---
 
 ## 2. Bug fixes from a code review
