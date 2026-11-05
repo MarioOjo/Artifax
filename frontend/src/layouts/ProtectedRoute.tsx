@@ -21,7 +21,11 @@ const ProtectedRoute: React.FC = () => {
 
   // Blocks layouts and Sidebars from rendering while verifying cookie state
   if (isAuthenticated === null) {
-    return <div style={{ padding: '2rem', color: '#fff' }}>Verifying Session...</div>;
+    return (
+      <div className="session-loader" role="status" aria-label="Verifying session">
+        <span className="session-loader-spinner" aria-hidden="true" />
+      </div>
+    );
   }
 
   return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;

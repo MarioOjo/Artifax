@@ -281,6 +281,12 @@ demo account (3.6).
   reports the current suites and freshly measured coverage.
 - **Commits:** `848ebcc`, `c748ccd`
 
+### 2.22 Session check screen
+- **Problem:** While the app checked the session on opening a page, it showed the text "Verifying Session..." in
+  hard-coded white, which was invisible in the light theme.
+- **Fix:** A centred spinner in the theme's colours replaces the text. Screen readers still announce "Verifying
+  session", and the spin slows down when the system asks for reduced motion.
+
 ---
 
 ## 3. Enhancement: secure, transactional crafting
