@@ -95,6 +95,10 @@ Getting it running surfaced these problems.
 - **Downloads:** The first release built with the Windows zip maker, so `npm run make` produced the portable zip and
   the installer from one build.
 
+### 1.10 Release v0.3.2: inventory table
+- **What:** v0.3.2 ships the inventory fixes in 2.27 to the desktop app: separate quantity and production-time
+  columns, category tabs that stay applied while searching, and clearer low-stock and raw-material labels.
+
 ---
 
 ## 2. Bug fixes from a code review
