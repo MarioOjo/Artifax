@@ -333,6 +333,20 @@ demo account (3.6).
 - **Tests:** Eight unit tests cover the rules. Seven of them fail against the previous controller; the eighth checks
   that a request without branch and role keeps the current values.
 
+### 2.27 Inventory table and filters
+- **Problem:** The quantity and production-time columns sat so close together they read as one ("60 0 min"), and
+  raw materials, which are not produced, showed "0 min". Choosing a category tab had no effect while a search or
+  location filter was set, so a selected tab could show items from other categories. The tabs listed every built-in
+  category, including empty ones, and showed unmatched categories in lower case; the Categories statistic counted the
+  empty tabs. The low-stock strip only shows the signed-in user's branch but did not say so. A raw material's details
+  said "No blueprint ingredients were found", which reads like an error.
+- **Fix:** The columns are spaced apart, the header reads "Prod. time", and raw materials show a dash. The category
+  tab always applies alongside search, status and location. Tabs, and the Categories statistic, cover only
+  categories that have items, with consistent capitalisation. The strip reads "Low Stock at <branch>", and raw
+  materials are described as stocked directly.
+- **Tests:** One test checks the tab stays applied while searching (it fails against the previous page), and one
+  checks the tabs, the Categories statistic and branch-named alerts.
+
 ---
 
 ## 3. Enhancement: secure, transactional crafting

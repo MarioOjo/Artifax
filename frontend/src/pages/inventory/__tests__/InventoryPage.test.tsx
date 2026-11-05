@@ -90,4 +90,27 @@ describe('InventoryPage', () => {
 
     expect(screen.getByTestId('edit-modal')).toHaveTextContent('Editing Widget at Cape Town Plant (qty 40)');
   });
+
+  it('keeps the selected category tab applied while searching', async () => {
+    (inventoryApi.getInventoryOverview as jest.Mock).mockResolvedValue({
+      items: [
+        widgetAt(1, 'Head Office', 12),
+        { ...widgetAt(1, 'Head Office', 7), id: '2', name: 'Bracket', category: 'Metal', tab: 'metal', productionTime: 0 },
+      ],
+      previewRows: [],
+      alerts: [],
+      stats: [],
+      tabs: [{ id: 'all', label: 'All (2)' }, { id: 'parts', label: 'Parts (1)' }, { id: 'metals', label: 'Metals (1)' }],
+    });
+    render(<InventoryPage />);
+    await screen.findByText('Bracket');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Metals (1)' }));
+    await userEvent.type(screen.getByPlaceholderText(/Search items/i), 'Head');
+
+    expect(screen.getByText('Bracket')).toBeInTheDocument();
+    expect(screen.queryByText('Widget')).not.toBeInTheDocument();
+    // Raw materials show no production time
+    expect(screen.getByText('—')).toBeInTheDocument();
+  });
 });

@@ -102,8 +102,7 @@ function InventoryMaterialsPopover({ details, loading, compact = false }: Invent
           </div>
         ) : (
           <div className="space-y-2 text-sm text-muted">
-            <p>No blueprint ingredients were found for this item.</p>
-            <p>Live inventory availability will appear here when the backend has matching material data.</p>
+            <p>This is a raw material: it is stocked directly rather than made from other items.</p>
           </div>
         )}
       </div>

@@ -224,15 +224,18 @@ export function buildInventoryOverview(items: InventoryItem[]): InventoryOvervie
     status: item.status,
   }));
 
+  // Only categories that have items get a tab, so the tabs (and the Categories stat) reflect real stock
   const tabs: InventoryTab[] = [
     { id: 'all', label: `All (${items.length})` },
-    ...INVENTORY_CATEGORY_DEFINITIONS.map((definition) => {
-      const count = definition.aliases.reduce((sum, alias) => sum + (categoryCounts.get(alias) ?? 0), 0);
-      return {
+    ...INVENTORY_CATEGORY_DEFINITIONS.map((definition) => ({
+      definition,
+      count: definition.aliases.reduce((sum, alias) => sum + (categoryCounts.get(alias) ?? 0), 0),
+    }))
+      .filter(({ count }) => count > 0)
+      .map(({ definition, count }) => ({
         id: slugifyCategory(definition.label),
         label: `${definition.label} (${count})`,
-      };
-    }),
+      })),
   ];
 
   const knownCategoryKeys = new Set(INVENTORY_CATEGORY_DEFINITIONS.flatMap((definition) => definition.aliases));
@@ -241,7 +244,7 @@ export function buildInventoryOverview(items: InventoryItem[]): InventoryOvervie
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([category, count]) => ({
       id: slugifyCategory(category),
-      label: `${category} (${count})`,
+      label: `${category.charAt(0).toUpperCase()}${category.slice(1)} (${count})`,
     }));
 
   tabs.push(...extraTabs);

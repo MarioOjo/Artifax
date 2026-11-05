@@ -184,12 +184,11 @@ function InventoryPage() {
 
   const filteredItems = useMemo(() => {
     const searchLower = search.toLowerCase();
-    const isActivelySearchingOrFiltering = searchLower.length > 0 || zone !== 'ALL';
 
     return sourceItems
       .filter((item) => {
-        // FIX 1: Safely check for matches, accounting for an optional 's' at the end
-        if (!isActivelySearchingOrFiltering && activeTab !== 'all') {
+        // The selected category tab always applies, together with search, status and location
+        if (activeTab !== 'all') {
           const itemCategory = (item.category || '').toLowerCase();
           const itemTab = (item.tab || '').toLowerCase();
           const targetTab = activeTab.toLowerCase();
@@ -244,7 +243,10 @@ function InventoryPage() {
         }
       />
 
-      <AlertStrip label={`Low Stock: ${filteredAlerts.length}`} items={filteredAlerts} />
+      <AlertStrip
+        label={loggedInBranchId && currentUser?.branchName ? `Low Stock at ${currentUser.branchName}: ${filteredAlerts.length}` : `Low Stock: ${filteredAlerts.length}`}
+        items={filteredAlerts}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {inventoryOverview.stats.map((stat) => (
@@ -284,8 +286,8 @@ function InventoryPage() {
                 <tr className="border-b border-border">
                   <th className="pb-2 font-medium">Material / SKU</th>
                   <th className="pb-2 font-medium">Category</th>
-                  <th className="pb-2 text-right font-medium">Qty</th>
-                  <th className="pb-2 font-medium">Prod.</th>
+                  <th className="pb-2 pr-10 text-right font-medium">Qty</th>
+                  <th className="pb-2 font-medium">Prod. time</th>
                   <th className="pb-2 font-medium">Location</th>
                   <th className="pb-2 font-medium">Status</th>
                   <th className="pb-2 font-medium">Edit</th>
@@ -306,9 +308,10 @@ function InventoryPage() {
                           <p className="text-xs text-muted">{item.sku}</p>
                         </td>
                         <td className="py-2.5 pr-3 text-muted">{item.category}</td>
-                        <td className="py-2.5 pr-3 text-right font-semibold text-text">{item.quantity}</td>
+                        <td className="py-2.5 pr-10 text-right font-semibold text-text">{item.quantity}</td>
                         <td className="py-2.5 pr-3">
-                          <p className="text-xs text-muted">{item.productionTime} min</p>
+                          {/* Raw materials are not produced, so they have no production time */}
+                          <p className="text-xs text-muted">{item.productionTime > 0 ? `${item.productionTime} min` : '—'}</p>
                         </td>
                         <td className="inventory-location-cell py-2.5 pr-3 text-muted">{item.location}</td>
                         <td className="py-2.5 pr-3">

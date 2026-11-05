@@ -1,4 +1,4 @@
-import { getInventoryItems, getItemMaterialDetails, getItemCategoryOptions } from '../inventoryApi';
+import { getInventoryItems, getItemMaterialDetails, getItemCategoryOptions, buildInventoryOverview, InventoryItem } from '../inventoryApi';
 import { api } from '../../hooks/useApi';
 
 jest.mock('../../hooks/useApi', () => ({
@@ -88,4 +88,20 @@ describe('getItemCategoryOptions', () => {
 
     expect(getItemCategoryOptions(items)).toEqual(['Furniture', 'Metals']);
   });
+});
+
+test('buildInventoryOverview only has tabs for categories in stock and names the branch in alerts', () => {
+  const item = (id: string, name: string, category: string, quantity: number, location: string): InventoryItem => ({
+    id, name, sku: '', category, quantity, price: null, minStock: 5, location, branchId: 1,
+    status: quantity < 5 ? 'LOW' : 'OK', productionTime: 0, tab: category.toLowerCase(),
+  } as InventoryItem);
+
+  const overview = buildInventoryOverview([
+    item('1', 'Bolt', 'Metal', 50, 'Head Office'),
+    item('2', 'Gear', 'mechanical', 2, 'Cape Town Plant'),
+  ]);
+
+  expect(overview.tabs.map((tab) => tab.label)).toEqual(['All (2)', 'Metals (1)', 'Mechanical (1)']);
+  expect(overview.stats.find((stat) => stat.id === 'categories')?.value).toBe(2);
+  expect(overview.alerts).toEqual(['Gear · Cape Town Plant (2 remaining)']);
 });
