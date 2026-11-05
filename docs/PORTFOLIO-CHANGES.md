@@ -281,19 +281,6 @@ demo account (3.6).
   reports the current suites and freshly measured coverage.
 - **Commits:** `848ebcc`, `c748ccd`
 
-### 2.26 Editing a user silently dropped branch and role changes
-- **Problem:** The user form sends name, email, branch and role, but the API's update saved only name, email and
-  password. Changing a user's role, or their branch together with anything else, was discarded while the app
-  reported "User updated successfully". Nothing stopped the last admin being demoted or removed, which would leave
-  nobody able to manage users or reset 2FA. Changing an email to one another user already had was not checked, and
-  new users could be created with any role text or a branch that does not exist.
-- **Fix:** One save now stores everything. The API checks that the branch exists and is not archived, that the
-  role is Employee or Admin (the demo account's role cannot change), and that the email is not taken. It refuses to
-  demote or remove the last admin. When admins edit their own account, their session is updated to match. The app
-  shows the API's reason when a change is refused instead of a generic error.
-- **Tests:** Eight unit tests cover the rules. Seven of them fail against the previous controller; the eighth checks
-  that a request without branch and role keeps the current values.
-
 ### 2.22 Session check screen
 - **Problem:** While the app checked the session on opening a page, it showed the text "Verifying Session..." in
   hard-coded white, which was invisible in the light theme.
@@ -325,6 +312,19 @@ demo account (3.6).
   focus starts on Cancel, Escape closes it, and destructive actions use a red button. The user form uses theme
   tokens and red error text in both themes, and the history statistics inherit the app font.
 - **Tests:** The user page tests click the dialog's buttons, and a new test checks that Escape cancels.
+
+### 2.26 Editing a user silently dropped branch and role changes
+- **Problem:** The user form sends name, email, branch and role, but the API's update saved only name, email and
+  password. Changing a user's role, or their branch together with anything else, was discarded while the app
+  reported "User updated successfully". Nothing stopped the last admin being demoted or removed, which would leave
+  nobody able to manage users or reset 2FA. Changing an email to one another user already had was not checked, and
+  new users could be created with any role text or a branch that does not exist.
+- **Fix:** One save now stores everything. The API checks that the branch exists and is not archived, that the
+  role is Employee or Admin (the demo account's role cannot change), and that the email is not taken. It refuses to
+  demote or remove the last admin. When admins edit their own account, their session is updated to match. The app
+  shows the API's reason when a change is refused instead of a generic error.
+- **Tests:** Eight unit tests cover the rules. Seven of them fail against the previous controller; the eighth checks
+  that a request without branch and role keeps the current values.
 
 ---
 
