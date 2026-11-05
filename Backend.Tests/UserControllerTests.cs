@@ -291,5 +291,135 @@ namespace Backend.Tests
             Assert.Equal("admin1@artifax.com", _result.UserEmail);
             Assert.Equal("Ad1", _result.Username);
         }
+
+        #region Editing users
+
+        async Task<UserController> SignedInAdminController(string email = "admin1@artifax.com")
+        {
+            var _controller = await GetPopulatedDummyController();
+            _controller.ControllerContext = new ControllerContext { HttpContext = GetMockSession().Object };
+            await LoginWith2FaAsync(_controller, email, "123");
+            return _controller;
+        }
+
+        static EmployeeWriteDto Edit(string email, string name, int branchId, string level) =>
+            new() { EmployeeEmail = email, EmployeeName = name, BranchID = branchId, EmployeeLevel = level };
+
+        Task<Employee> Stored(string email) =>
+            _populatedContext.Employees.AsNoTracking().FirstAsync(e => e.EmployeeEmail == email);
+
+        [Fact]
+        public async Task Edit_SavesBranchAndRoleTogetherWithOtherDetails()
+        {
+            var _controller = await SignedInAdminController();
+
+            var _response = await _controller.ChangeEmployeeDetails("employee1@artifax.com",
+                Edit("employee1@artifax.com", "Emp1 Renamed", 3, "Admin"));
+
+            Assert.IsType<OkObjectResult>(_response.Result);
+            var _saved = await Stored("employee1@artifax.com");
+            Assert.Equal("Emp1 Renamed", _saved.EmployeeName);
+            Assert.Equal(3, _saved.BranchId);
+            Assert.Equal("Admin", _saved.EmployeeLevel);
+        }
+
+        [Fact]
+        public async Task Edit_KeepsBranchAndRole_WhenAnOlderClientOmitsThem()
+        {
+            var _controller = await SignedInAdminController();
+            await _controller.ChangeEmployeeBranch("employee1@artifax.com", 2);
+
+            var _response = await _controller.ChangeEmployeeDetails("employee1@artifax.com",
+                new EmployeeWriteDto { EmployeeEmail = "employee1@artifax.com", EmployeeName = "Emp1" });
+
+            Assert.IsType<OkObjectResult>(_response.Result);
+            var _saved = await Stored("employee1@artifax.com");
+            Assert.Equal(2, _saved.BranchId);
+            Assert.Equal("Employee", _saved.EmployeeLevel);
+        }
+
+        [Fact]
+        public async Task Edit_RejectsUnknownBranchAndRole()
+        {
+            var _controller = await SignedInAdminController();
+
+            var _badBranch = await _controller.ChangeEmployeeDetails("employee1@artifax.com", Edit("employee1@artifax.com", "Emp1", 99, "Employee"));
+            var _badRole = await _controller.ChangeEmployeeDetails("employee1@artifax.com", Edit("employee1@artifax.com", "Emp1", 1, "Owner"));
+            var _demoRole = await _controller.ChangeEmployeeDetails("employee1@artifax.com", Edit("employee1@artifax.com", "Emp1", 1, "Demo"));
+
+            Assert.IsType<BadRequestObjectResult>(_badBranch.Result);
+            Assert.IsType<BadRequestObjectResult>(_badRole.Result);
+            Assert.IsType<BadRequestObjectResult>(_demoRole.Result);
+            Assert.Equal("Employee", (await Stored("employee1@artifax.com")).EmployeeLevel);
+        }
+
+        [Fact]
+        public async Task Edit_RejectsAnEmailAnotherUserHas()
+        {
+            var _controller = await SignedInAdminController();
+
+            var _response = await _controller.ChangeEmployeeDetails("employee1@artifax.com",
+                Edit("employee2@artifax.com", "Emp1", 1, "Employee"));
+
+            Assert.IsType<ConflictObjectResult>(_response.Result);
+            Assert.Equal("Emp1", (await Stored("employee1@artifax.com")).EmployeeName);
+        }
+
+        [Fact]
+        public async Task Edit_CanDemoteAnAdmin_WhileAnotherAdminRemains()
+        {
+            var _controller = await SignedInAdminController();
+
+            var _response = await _controller.ChangeEmployeeDetails("admin2@artifax.com", Edit("admin2@artifax.com", "Ad2", 1, "Employee"));
+
+            Assert.IsType<OkObjectResult>(_response.Result);
+            Assert.Equal("Employee", (await Stored("admin2@artifax.com")).EmployeeLevel);
+        }
+
+        [Fact]
+        public async Task LastAdmin_CannotBeDemotedOrRemoved()
+        {
+            var _controller = await SignedInAdminController();
+            foreach (var other in _populatedContext.Employees.Where(e => e.EmployeeEmail == "admin2@artifax.com" || e.EmployeeEmail == "admin3@artifax.com"))
+                other.IsArchived = true;
+            await _populatedContext.SaveChangesAsync();
+            int _adminId = (await Stored("admin1@artifax.com")).EmployeeId;
+
+            var _demote = await _controller.ChangeEmployeeDetails("admin1@artifax.com", Edit("admin1@artifax.com", "Ad1", 1, "Employee"));
+            var _remove = await _controller.DeleteEmployee(_adminId);
+
+            Assert.IsType<ConflictObjectResult>(_demote.Result);
+            Assert.IsType<ConflictObjectResult>(_remove);
+            var _saved = await Stored("admin1@artifax.com");
+            Assert.Equal("Admin", _saved.EmployeeLevel);
+            Assert.False(_saved.IsArchived);
+        }
+
+        [Fact]
+        public async Task EditingYourOwnAccount_UpdatesYourSession()
+        {
+            var _controller = await SignedInAdminController();
+
+            await _controller.ChangeEmployeeDetails("admin1@artifax.com", Edit("admin1.new@artifax.com", "Ad1 New", 2, "Admin"));
+
+            var _current = Assert.IsType<CurrentUserDto>(Assert.IsType<OkObjectResult>(_controller.GetCurrentUser()).Value);
+            Assert.Equal("admin1.new@artifax.com", _current.UserEmail);
+            Assert.Equal("Ad1 New", _current.Username);
+        }
+
+        [Fact]
+        public async Task Create_RejectsUnknownRoleAndBranch()
+        {
+            var _controller = await SignedInAdminController();
+
+            var _badRole = await _controller.CreateEmployee(new EmployeeWriteDto { EmployeeEmail = "new1@artifax.com", EmployeeName = "New", EmployeePassword = "secret1", BranchID = 1, EmployeeLevel = "Demo" });
+            var _badBranch = await _controller.CreateEmployee(new EmployeeWriteDto { EmployeeEmail = "new2@artifax.com", EmployeeName = "New", EmployeePassword = "secret1", BranchID = 99, EmployeeLevel = "Employee" });
+
+            Assert.IsType<BadRequestObjectResult>(_badRole.Result);
+            Assert.IsType<BadRequestObjectResult>(_badBranch.Result);
+            Assert.False(await _populatedContext.Employees.AnyAsync(e => e.EmployeeEmail.StartsWith("new")));
+        }
+
+        #endregion
     }
 }

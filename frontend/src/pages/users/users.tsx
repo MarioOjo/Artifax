@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
 import PageHeader from '../../components/layout/PageHeader';
 import CraeteUsersPage from './componets/craeteUser/craeteusers';
 import UserList from './componets/userList/UserList';
@@ -6,6 +7,12 @@ import { getCurrentDateSAST } from '../../Date/dateUtils';
 import { useApi } from '../../hooks';
 import { getCurrentUser, setCurrentUser } from '../../utils/currentUser';
 import { showError, showSuccess } from '../../utils/toast';
+
+// The API explains refusals (duplicate email, last admin...) in plain text; show that instead of a generic error
+const refusalMessage = (err: unknown): string | null =>
+  axios.isAxiosError(err) && err.response && err.response.status < 500 && typeof err.response.data === 'string'
+    ? err.response.data
+    : null;
 
 
 type User = {
@@ -172,7 +179,7 @@ const Users: React.FC = () => {
       showSuccess('User updated successfully.');
     } catch (err) {
       console.error('Save user failed', err);
-      showError('Unable to save user. Please try again.');
+      showError(refusalMessage(err) ?? 'Unable to save user. Please try again.');
     }
   };
 
@@ -191,7 +198,7 @@ const Users: React.FC = () => {
       // do not clear or change current session when deleting a user
     } catch (err) {
       console.error('Delete user failed', err);
-      showError('Unable to remove user. Please try again.');
+      showError(refusalMessage(err) ?? 'Unable to remove user. Please try again.');
     }
   };
 
