@@ -164,15 +164,17 @@ function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="materials-section mt-3">
-                        <p className="section-label text-[11px] text-muted">MATERIALS</p>
-                        <div className="material-tags mt-2">
-                          {job.materials.slice(0, 6).map((m, i) => (
-                            <span key={i} className="material-tag">{m}</span>
-                          ))}
-                          {job.materials.length > 6 && <span className="material-tag">+{job.materials.length - 6} more</span>}
+                      {job.materials.length > 0 && (
+                        <div className="materials-section mt-3">
+                          <p className="section-label text-[11px] text-muted">MATERIALS</p>
+                          <div className="material-tags mt-2">
+                            {job.materials.slice(0, 6).map((m, i) => (
+                              <span key={i} className="material-tag">{m}</span>
+                            ))}
+                            {job.materials.length > 6 && <span className="material-tag">+{job.materials.length - 6} more</span>}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       <div className="card-actions mt-3 flex gap-2">
                         <div className="text-xs text-muted">{job.employeeName}</div>

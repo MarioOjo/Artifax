@@ -336,3 +336,56 @@ html[data-theme='synthwave'] {
 @media (prefers-reduced-motion: reduce) {
   .session-loader-spinner { animation-duration: 2.4s; }
 }
+
+/*
+  Toasts (react-toastify) in the app's theme. Scoped to the .Toastify container
+  because ReactToastify.css loads after this file and sets its own :root values.
+*/
+.Toastify {
+  --toastify-font-family: 'Sora', 'Segoe UI', sans-serif;
+  --toastify-color-light: var(--surface);
+  --toastify-text-color-light: var(--text);
+  --toastify-toast-bd-radius: 14px;
+  --toastify-toast-shadow: 0 20px 40px rgba(15, 23, 42, 0.14);
+  --toastify-color-progress-light: var(--primary);
+  --toastify-color-progress-bgo: 0.15;
+  --toast-info: var(--primary);
+  --toast-success: #15803d;
+  --toast-warning: #b45309;
+  --toast-error: #b91c1c;
+  /* ReactToastify.css derives these from its own :root colours, so each one is set here */
+  --toastify-icon-color-info: var(--toast-info);
+  --toastify-icon-color-success: var(--toast-success);
+  --toastify-icon-color-warning: var(--toast-warning);
+  --toastify-icon-color-error: var(--toast-error);
+  --toastify-color-progress-info: var(--toast-info);
+  --toastify-color-progress-success: var(--toast-success);
+  --toastify-color-progress-warning: var(--toast-warning);
+  --toastify-color-progress-error: var(--toast-error);
+}
+
+html[data-theme='synthwave'] .Toastify {
+  --toastify-toast-shadow: 0 20px 40px rgba(3, 10, 18, 0.45);
+  --toast-info: #7cb8e8;
+  --toast-success: #4ade80;
+  --toast-warning: #fbbf24;
+  --toast-error: #f87171;
+}
+
+.Toastify .Toastify__toast {
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.Toastify .Toastify__close-button {
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+.Toastify .Toastify__close-button:hover,
+.Toastify .Toastify__close-button:focus-visible {
+  color: var(--text);
+  opacity: 1;
+}

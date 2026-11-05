@@ -281,6 +281,38 @@ demo account (3.6).
   reports the current suites and freshly measured coverage.
 - **Commits:** `848ebcc`, `c748ccd`
 
+### 2.22 Session check screen
+- **Problem:** While the app checked the session on opening a page, it showed the text "Verifying Session..." in
+  hard-coded white, which was invisible in the light theme.
+- **Fix:** A centred spinner in the theme's colours replaces the text. Screen readers still announce "Verifying
+  session", and the spin slows down when the system asks for reduced motion.
+
+### 2.23 Notifications in the app's style
+- **Problem:** Notifications used react-toastify's stock look: a white card with grey generic sans-serif text and a
+  rainbow progress bar, in both themes. In the dark theme they were the only white element on screen.
+- **Fix:** Notifications now use the theme's surface, border, text colour and card radius, and the app's Sora font.
+  Success, error, warning and information colours were chosen for each theme so icons and progress bars stay
+  readable on light and dark surfaces. The close button follows the theme too.
+
+### 2.24 Dashboard and user form labels
+- **Problem:** Stock is held per branch, but the dashboard's low-stock alerts showed only the item name, so an item
+  low at three branches appeared as three identical alerts. The crafting queue's "Materials" list showed the item
+  being made rather than what it is made from. The user form kept the heading "Create User" while showing or
+  editing an existing user.
+- **Fix:** Low-stock alerts name the branch. Each job lists its recipe scaled by the order quantity (for example
+  "Gear x20"), and the section is hidden for items without a recipe. The form heading reads "Create User",
+  "User Details" or "Edit User" to match what the form is doing.
+
+### 2.25 Visual consistency pass
+- **Problem:** Removing a user or blueprint and resetting 2FA asked for confirmation with the browser's native
+  dialog, which ignores the app's theme and fonts. On the user form, validation errors were grey rather than red,
+  and several greys were hard-coded light-theme values that were faint in the dark theme. The crafting history
+  statistics used the system font instead of the app's.
+- **Fix:** A themed confirmation dialog (`components/common/ConfirmDialog.tsx`) styled like the inventory modals:
+  focus starts on Cancel, Escape closes it, and destructive actions use a red button. The user form uses theme
+  tokens and red error text in both themes, and the history statistics inherit the app font.
+- **Tests:** The user page tests click the dialog's buttons, and a new test checks that Escape cancels.
+
 ### 2.26 Editing a user silently dropped branch and role changes
 - **Problem:** The user form sends name, email, branch and role, but the API's update saved only name, email and
   password. Changing a user's role, or their branch together with anything else, was discarded while the app
@@ -293,12 +325,6 @@ demo account (3.6).
   shows the API's reason when a change is refused instead of a generic error.
 - **Tests:** Eight unit tests cover the rules. Seven of them fail against the previous controller; the eighth checks
   that a request without branch and role keeps the current values.
-
-### 2.22 Session check screen
-- **Problem:** While the app checked the session on opening a page, it showed the text "Verifying Session..." in
-  hard-coded white, which was invisible in the light theme.
-- **Fix:** A centred spinner in the theme's colours replaces the text. Screen readers still announce "Verifying
-  session", and the spin slows down when the system asks for reduced motion.
 
 ---
 

@@ -177,7 +177,7 @@ function CraeteUsersPage({ user, onSave, onDelete, onRequestEdit, onResetTwoFact
               <path d="M4.5 20c1.8-3.3 4.5-5 7.5-5s5.7 1.7 7.5 5" />
             </svg>
           </div>
-          <h1>Create User</h1>
+          <h1>{!user ? 'Create User' : isEditing ? 'Edit User' : 'User Details'}</h1>
         </div>
       </header>
 
