@@ -23,13 +23,15 @@ The core objective of the system is to deliver a highly scalable backend archite
 
 
 ### Step 1:
-Go to the [latest Artifax release](https://github.com/MarioOjo/Artifax/releases/latest) on GitHub.
+Download **[`Artifax-win32-x64.zip`](https://github.com/MarioOjo/Artifax/releases/latest/download/Artifax-win32-x64.zip)** from the [latest Artifax release](https://github.com/MarioOjo/Artifax/releases/latest). Nothing needs to be installed.
 
 ### Step 2:
-Download the **`Artifax-<version>-Setup.exe`** asset and run it. Artifax installs, adds Start-menu and desktop shortcuts, and opens.
+Extract (unzip) the downloaded file, open the extracted `Artifax-win32-x64` folder and run **`Artifax.exe`**.
 
 ### Step 3:
-The installer is not code-signed, so Windows SmartScreen may show a warning. Choose **More info → Run anyway**.
+The app is not code-signed, so Windows SmartScreen may show a warning. Choose **More info → Run anyway**.
+
+To install it instead (Start-menu and desktop shortcuts, updates in place), run the **`Artifax-<version>-Setup.exe`** asset from the same release.
 
 ### Step 4:
 Sign in. To explore without an account, use the **read-only demo account**:
