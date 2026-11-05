@@ -5,6 +5,7 @@ import CraeteUsersPage from './componets/craeteUser/craeteusers';
 import UserList from './componets/userList/UserList';
 import { getCurrentDateSAST } from '../../Date/dateUtils';
 import { useApi } from '../../hooks';
+import { useConfirm } from '../../components/common/ConfirmDialog';
 import { getCurrentUser, setCurrentUser } from '../../utils/currentUser';
 import { showError, showSuccess } from '../../utils/toast';
 
@@ -27,6 +28,7 @@ type User = {
 const Users: React.FC = () => {
   const currentDate = getCurrentDateSAST();
   const api = useApi();
+  const [confirm, confirmDialog] = useConfirm();
   const [users, setUsers] = useState<User[]>([]);
   const [branchMap, setBranchMap] = useState<Record<number, string>>({});
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -185,7 +187,12 @@ const Users: React.FC = () => {
 
   const handleDeleteUser = async (id: number) => {
     // The API archives the user rather than deleting them, so their order history is kept
-    const confirmed = window.confirm('Remove this user? They will no longer be able to sign in. Their past orders and history are kept.');
+    const confirmed = await confirm({
+      title: 'Remove user?',
+      message: 'They will no longer be able to sign in. Their past orders and history are kept.',
+      confirmLabel: 'Remove user',
+      tone: 'danger',
+    });
     if (!confirmed) {
       return;
     }
@@ -204,7 +211,12 @@ const Users: React.FC = () => {
 
   // For a user who lost their authenticator: their next sign-in shows a new setup QR code
   const handleResetTwoFactor = async (id: number) => {
-    const confirmed = window.confirm("Reset this user's two-factor authentication? Their next sign-in will show a new QR code to scan.");
+    const confirmed = await confirm({
+      title: 'Reset two-factor authentication?',
+      message: 'Their next sign-in will show a new QR code to scan with their authenticator app.',
+      confirmLabel: 'Reset 2FA',
+      tone: 'danger',
+    });
     if (!confirmed) {
       return;
     }
@@ -283,6 +295,7 @@ const Users: React.FC = () => {
           </div>
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 };
