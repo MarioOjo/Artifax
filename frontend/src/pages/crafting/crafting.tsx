@@ -13,6 +13,7 @@ import BlueprintPanel from './components/blueprintPanel/blueprintPanel';
 import NewBlueprint from './components/newBlueprint/newBlueprint';
 import BlueprintEdit from './components/blueprintEdit/BlueprintEdit';
 import { useApi } from '../../hooks';
+import { useConfirm } from '../../components/common/ConfirmDialog';
 import { showError, showSuccess } from '../../utils/toast';
 import { getInventoryOverview } from '../../services/inventoryApi';
 import { Blueprint } from './components/craftingData';
@@ -208,6 +209,7 @@ const Crafting: FC = () => {
   const [lowStockAlerts, setLowStockAlerts] = useState<string[]>([]);
   const [blueprintRefreshKey, setBlueprintRefreshKey] = useState<number>(0);
   const api = useApi();
+  const [confirm, confirmDialog] = useConfirm();
   const currentUser = useCurrentUser();
   const currentBranchId = currentUser?.branchId;
   const currentDate = getCurrentDateSAST();
@@ -343,7 +345,12 @@ const Crafting: FC = () => {
     }
 
     const itemId = parseInt(selectedBlueprintId.replace('bp-', ''));
-    const confirmed = window.confirm('Remove this blueprint? The item is archived: it disappears from inventory and crafting, but past orders and their history are kept.');
+    const confirmed = await confirm({
+      title: 'Remove blueprint?',
+      message: 'The item is archived: it disappears from inventory and crafting, but past orders and their history are kept.',
+      confirmLabel: 'Remove blueprint',
+      tone: 'danger',
+    });
     if (!confirmed) {
       return;
     }
@@ -431,6 +438,7 @@ const Crafting: FC = () => {
           {activeTab === 'active' && <ActiveJobsContent />}
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { useApi } from '../../hooks';
 import Users from './users';
 
@@ -119,40 +119,54 @@ describe('Users page', () => {
   });
 
   it('asks for confirmation before removing a user, and does nothing when cancelled', async () => {
-    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
     render(<Users />);
 
     await waitFor(() => screen.getByText(/Employee Two/i));
     fireEvent.click(screen.getByText(/Employee Two/i));
     fireEvent.click(await screen.findByRole('button', { name: /Delete User/i }));
 
-    expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/history are kept/i));
+    const dialog = await screen.findByRole('alertdialog', { name: /Remove user/i });
+    expect(dialog).toHaveTextContent(/history are kept/i);
+    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/i }));
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     expect(api.delete).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
   });
 
   it('removes the user once confirmed', async () => {
-    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
     render(<Users />);
 
     await waitFor(() => screen.getByText(/Employee Two/i));
     fireEvent.click(screen.getByText(/Employee Two/i));
     fireEvent.click(await screen.findByRole('button', { name: /Delete User/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /^Remove user$/i }));
 
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/User/employee?id=2'));
-    confirmSpy.mockRestore();
+  });
+
+  it('closes the confirmation with Escape without removing anyone', async () => {
+    render(<Users />);
+
+    await waitFor(() => screen.getByText(/Employee Two/i));
+    fireEvent.click(screen.getByText(/Employee Two/i));
+    fireEvent.click(await screen.findByRole('button', { name: /Delete User/i }));
+    await screen.findByRole('alertdialog');
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+    expect(api.delete).not.toHaveBeenCalled();
   });
 
   it('resets two-factor authentication for a user after confirmation', async () => {
-    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
     api.patch.mockResolvedValue({});
     render(<Users />);
 
     await waitFor(() => screen.getByText(/Employee Two/i));
     fireEvent.click(screen.getByText(/Employee Two/i));
     fireEvent.click(await screen.findByRole('button', { name: /Reset 2FA/i }));
+    const dialog = await screen.findByRole('alertdialog', { name: /Reset two-factor/i });
+    fireEvent.click(within(dialog).getByRole('button', { name: /^Reset 2FA$/i }));
 
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/User/employee/reset-2fa?id=2'));
-    confirmSpy.mockRestore();
   });
 });

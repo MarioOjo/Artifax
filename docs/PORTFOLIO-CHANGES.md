@@ -303,6 +303,16 @@ demo account (3.6).
   "Gear x20"), and the section is hidden for items without a recipe. The form heading reads "Create User",
   "User Details" or "Edit User" to match what the form is doing.
 
+### 2.25 Visual consistency pass
+- **Problem:** Removing a user or blueprint and resetting 2FA asked for confirmation with the browser's native
+  dialog, which ignores the app's theme and fonts. On the user form, validation errors were grey rather than red,
+  and several greys were hard-coded light-theme values that were faint in the dark theme. The crafting history
+  statistics used the system font instead of the app's.
+- **Fix:** A themed confirmation dialog (`components/common/ConfirmDialog.tsx`) styled like the inventory modals:
+  focus starts on Cancel, Escape closes it, and destructive actions use a red button. The user form uses theme
+  tokens and red error text in both themes, and the history statistics inherit the app font.
+- **Tests:** The user page tests click the dialog's buttons, and a new test checks that Escape cancels.
+
 ---
 
 ## 3. Enhancement: secure, transactional crafting
