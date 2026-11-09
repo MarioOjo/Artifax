@@ -99,9 +99,11 @@ Getting it running surfaced these problems.
 - **What:** v0.3.2 ships the inventory fixes in 2.27 to the desktop app: separate quantity and production-time
   columns, category tabs that stay applied while searching, and clearer low-stock and raw-material labels.
 
-### 1.11 Release v0.3.3: current API address
-- **What:** v0.3.3 ships the fix in 2.28. Earlier releases had the old Render address built in and could not sign
-  in; this one connects to `https://artifax-x8pr.onrender.com`.
+### 1.11 Release v0.3.3: sign-in works again, clearer errors
+- **What:** v0.3.3 ships the fixes in 2.28 to 2.30. Earlier releases had the old Render address built in and could
+  not sign in; this one connects to `https://artifax-x8pr.onrender.com`. Failed loads now say so and offer Retry
+  instead of looking like empty data. Order controls explain failures, and are disabled for the read-only demo. A
+  slow first sign-in is explained. Placeholder text is gone, and several dead or unreachable controls are fixed.
 
 ---
 
