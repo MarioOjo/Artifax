@@ -99,6 +99,10 @@ Getting it running surfaced these problems.
 - **What:** v0.3.2 ships the inventory fixes in 2.27 to the desktop app: separate quantity and production-time
   columns, category tabs that stay applied while searching, and clearer low-stock and raw-material labels.
 
+### 1.11 Release v0.3.3: current API address
+- **What:** v0.3.3 ships the fix in 2.28. Earlier releases had the old Render address built in and could not sign
+  in; this one connects to `https://artifax-x8pr.onrender.com`.
+
 ---
 
 ## 2. Bug fixes from a code review
