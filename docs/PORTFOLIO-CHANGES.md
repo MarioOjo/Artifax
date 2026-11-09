@@ -364,7 +364,8 @@ demo account (3.6).
 - **Fix:** Both API clients (`services/apiClient.ts` and `hooks/useApi.ts`) default to the new address.
   `REACT_APP_API_BASE` still overrides it for local work.
 - **Evidence:** `/health` on the new address returns `ok` with the database connected and the latest commit, and
-  allows the dev server's origin through CORS. Frontend 55 of 55 passing with a clean type check.
+  allows the dev server's origin through CORS. Frontend 55 of 55 passing with a clean type check. Signing in
+  through the packaged v0.3.3 app, against the hosted API, works and loads the hosted data.
 
 ### 2.29 Login alert, dashboard loading and dead controls
 - **Problem:** The login screen showed a grey "Input required / Enter details to continue." alert before anything
