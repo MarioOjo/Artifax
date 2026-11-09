@@ -4,10 +4,10 @@
 - [Overview](#overview)
 - [Installation](#installation)
 - [Usage Guide](#usage-guide)
-- [Additional Mockups](#additional-mockups)
 - [Running locally](#running-locally)
 - [Test Coverage](#test-coverage)
 - [Technologies used](#technologies-used)
+- [Creators](#creators)
 - [Acknowledgements](#acknowledgements)
 ## Overview
 
@@ -40,7 +40,7 @@ Sign in. To explore without an account, use the **read-only demo account**:
 | --- | --- |
 | `demo@artifax.local` | `ArtifaxDemo1` |
 
-On the verification screen, choose **First time?**, scan the QR code with an authenticator app (Google Authenticator, Microsoft Authenticator, Authy...) and enter the 6-digit code. The demo account can view everything, but changes are disabled.
+On the verification screen, choose **First time?**, scan the QR code with an authenticator app (Google Authenticator, Microsoft Authenticator, Authy...) and enter the 6-digit code. The demo account can view everything, but changes are disabled, and a banner at the top of every page says so.
 
 The API runs on a free tier that sleeps when idle, so the first sign-in after a quiet spell can take up to a minute.
 
@@ -59,14 +59,14 @@ The API runs on a free tier that sleeps when idle, so the first sign-in after a 
     </td>
     <td width="50%">
       <h3>Dashboard</h3>
-      <p>The dashboard provides users with a simplified overview of the inventory, featuring clear labels for low-stock alerts. It also displays currently active jobs and tracks orders waiting in the queue for efficient monitoring.</p>
+      <p>The dashboard provides users with a simplified overview of the inventory, featuring low-stock alerts that name the branch running low. It also displays currently active jobs and tracks orders waiting in the queue for efficient monitoring.</p>
     </td>
   </tr>
 
   <tr>
     <td width="50%">
       <h3>Inventory</h3>
-      <p>The inventory screen displays all stocked items alongside their relevant information. This ensures quick access to essential details for seamless warehouse management.</p>
+      <p>The inventory screen displays all stocked items alongside their relevant information. Items can be narrowed by category tab, search, status and location together, and a strip highlights what is running low at your branch.</p>
     </td>
     <td width="50%" align="center">
       <img src="frontend/src/assets/ReadmeImg/Inv.png" alt="Inventory">
@@ -126,7 +126,7 @@ The API runs on a free tier that sleeps when idle, so the first sign-in after a 
   <tr>
     <td width="50%">
       <h3>User Management (Admin Only)</h3>
-      <p>Administrators can use this page to add new users or assign admin privileges. It also allows for the easy editing or deletion of current user data to maintain secure access control.</p>
+      <p>Administrators can use this page to add new users or assign admin privileges. They can edit a user's details, branch and role, reset a user's two-factor authentication, or remove users. The last admin cannot be demoted or removed, so someone can always manage accounts. Removals and 2FA resets ask for confirmation first.</p>
     </td>
     <td width="50%" align="center">
       <img src="frontend/src/assets/ReadmeImg/AdminUsers.png" alt="User Management">
@@ -162,27 +162,27 @@ cd frontend && npm test
 
 ## Test Coverage
 
-All tests pass: **116 backend** and **49 frontend**. When the project was handed over, 4 backend and 27 frontend
+All tests pass: **130 backend** and **55 frontend**. When the project was handed over, 4 backend and 27 frontend
 tests were failing. See [Portfolio changes](docs/PORTFOLIO-CHANGES.md#213-out-of-date-tests).
 
 ### Backend
 - **Unit tests** (xUnit, EF Core in-memory database, Moq) exercise the controllers directly: CRUD, validation,
   status codes and DTO mapping.
-- **Real-database tests** (31 of the 116) use [Testcontainers](https://testcontainers.com/) to start a throwaway
+- **Real-database tests** (37 of the 130) use [Testcontainers](https://testcontainers.com/) to start a throwaway
   PostgreSQL in Docker. They cover behaviour the in-memory database cannot show:
   - authorization through the full HTTP pipeline;
   - foreign keys and `ON DELETE RESTRICT`;
   - stock taken and returned in one transaction;
   - concurrent orders being unable to oversell stock.
 - **Regression tests** cover the bugs fixed after hand-over. Each fails on the old code and passes on the new.
-- **Coverage:** 58.7% of lines, excluding generated migration code, and 70.3% across controllers, services and
+- **Coverage:** 62.6% of lines, excluding generated migration code, and 74.5% across controllers, services and
   authentication.
 
 ### Frontend
 - Jest and React Testing Library tests for every page and the main components. They mock the shared API client and
   check that data loads, filters and forms behave, and that server errors (for example, crafting shortages) are
   shown.
-- **Coverage:** 57.1% of lines (statements 56.8%, branches 43.5%, functions 57.8%).
+- **Coverage:** 59.3% of lines (statements 59.0%, branches 45.5%, functions 60.1%).
 
 Commands are under [Running locally](#running-locally). The real-database tests need Docker.
 
@@ -209,6 +209,7 @@ The following section outlines all the technologies used for development and dep
 ### Frontend Technologies
 ![NodeJS](https://img.shields.io/badge/node.js-6DA55F.svg?style=for-the-badge&logo=node.js&logoColor=white)
 ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB)
+![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
 ![React Router](https://img.shields.io/badge/React_Router-CA4245?style=for-the-badge&logo=react-router&logoColor=white)
 ![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white)
 ![DaisyUI](https://img.shields.io/badge/daisyui-5A0EF8?style=for-the-badge&logo=daisyui&logoColor=white)
@@ -218,12 +219,15 @@ The following section outlines all the technologies used for development and dep
 
 - **Node.JS** - Node.js is a powerful runtime environment that allows developers to run JavaScript on the server side, letting you build fast and scalable backend applications outside of a web browser.
 - **React** - The foundational JavaScript library used for building the user interface.
+- **TypeScript** - A typed superset of JavaScript. The frontend is written in TypeScript so mistakes in how data is passed around are caught before the app runs.
 - **React Router** - The standard routing library for React. It enables navigation between different pages/views in a Single Page Application (SPA) without reloading the page.
 - **Axios** - A promise-based HTTP client used to send requests to backend APIs to fetch, send, or update data.
 - **TailwindCSS** - Tailwind CSS is a utility-first CSS framework that allows you to build custom website designs incredibly fast by applying pre-made style classes directly inside your HTML or JSX components.
 - **DaisyUI** - A popular component library plugin for Tailwind CSS. It provides ready to use components like buttons, modals, and cards so you don't have to write raw utility classes for everything.
 - **PostCSS** - Build tools that work behind the scenes with Tailwind to compile your CSS and automatically add browser vendor prefixes  for cross-browser compatibility.
 - **Chart.JS** - A popular JavaScript library used to render flexible, responsive charts (bar, line, pie charts, etc.).
+- **React Toastify** - Shows the app's pop-up notifications (success, error and warning messages), styled to match the app's theme.
+- **qrcode.react** - Draws the QR code that users scan with an authenticator app when setting up two-factor authentication.
 - **Figma** - Figma is a collaborative, cloud based design tool used by product teams to create user interfaces, wireframes, and interactive prototypes for websites and mobile applications in real-time.
 
 ---
