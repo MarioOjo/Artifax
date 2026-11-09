@@ -351,6 +351,15 @@ demo account (3.6).
 - **Tests:** One test checks the tab stays applied while searching (it fails against the previous page), and one
   checks the tabs, the Categories statistic and branch-named alerts.
 
+### 2.28 The desktop app pointed at an API address that no longer answers
+- **Problem:** The app's built-in API address was `https://artifax-5lqg.onrender.com`, but the Render service now
+  lives at `https://artifax-x8pr.onrender.com`. The old address does not respond at all, so the released app, which
+  has the address built in, could not sign anyone in and appeared to hang. The Render service itself was healthy.
+- **Fix:** Both API clients (`services/apiClient.ts` and `hooks/useApi.ts`) default to the new address.
+  `REACT_APP_API_BASE` still overrides it for local work.
+- **Evidence:** `/health` on the new address returns `ok` with the database connected and the latest commit, and
+  allows the dev server's origin through CORS. Frontend 55 of 55 passing with a clean type check.
+
 ---
 
 ## 3. Enhancement: secure, transactional crafting
