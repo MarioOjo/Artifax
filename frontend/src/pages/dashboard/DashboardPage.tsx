@@ -4,6 +4,7 @@ import PageHeader from '../../components/layout/PageHeader';
 import SectionCard from '../../components/common/SectionCard';
 import StatCard from '../../components/common/StatCard';
 import StatusBadge from '../../components/common/StatusBadge';
+import LoadError from '../../components/common/LoadError';
 
 import { buildInventoryOverview, getInventoryItems, InventoryItem, DashboardPreviewRow } from '../../services/inventoryApi';
 import { getCraftingQueue, QueueJob } from '../../services/orderApi';
@@ -19,8 +20,30 @@ function DashboardPage() {
   const [queuedJobs, setQueuedJobs] = useState<QueueJob[]>([]);
   // True until the first jobs request finishes, so "No active jobs" is not shown while loading
   const [loadingJobs, setLoadingJobs] = useState<boolean>(true);
+  // Failed loads show an error with Retry instead of the empty state
+  const [inventoryError, setInventoryError] = useState(false);
+  const [jobsError, setJobsError] = useState(false);
   const isFetchingRef = useRef(false);
   const mountedRef = useRef(true);
+
+  const loadInventory = useCallback(() => {
+    setLoadingInventory(true);
+    setInventoryError(false);
+    getInventoryItems()
+      .then((rows) => {
+        if (mountedRef.current) setInventoryItems(rows);
+      })
+      .catch((err) => {
+        console.error('Failed to load dashboard inventory data', err);
+        if (mountedRef.current) {
+          setInventoryItems([]);
+          setInventoryError(true);
+        }
+      })
+      .finally(() => {
+        if (mountedRef.current) setLoadingInventory(false);
+      });
+  }, []);
 
   const refreshJobs = useCallback(async () => {
     if (!mountedRef.current || isFetchingRef.current) {
@@ -38,12 +61,14 @@ function DashboardPage() {
 
       setActiveJobs(activeItems);
       setQueuedJobs(queuedItems);
+      setJobsError(false);
     } catch (err) {
       console.error('Failed to load crafting jobs', err);
 
       if (mountedRef.current) {
         setActiveJobs([]);
         setQueuedJobs([]);
+        setJobsError(true);
       }
     } finally {
       isFetchingRef.current = false;
@@ -56,20 +81,9 @@ function DashboardPage() {
     mountedRef.current = true;
 
     // load inventory once
-    setLoadingInventory(true);
-    getInventoryItems()
-      .then((rows) => {
-        if (mountedRef.current) setInventoryItems(rows);
-      })
-      .catch((err) => {
-        console.error('Failed to load dashboard inventory data', err);
-        if (mountedRef.current) setInventoryItems([]);
-      })
-      .finally(() => {
-        if (mountedRef.current) setLoadingInventory(false);
-      });
+    loadInventory();
 
-    // initial load and interval
+    // initial load and interval (a failed jobs load recovers on the next tick)
     void refreshJobs();
     intervalId = setInterval(() => {
       void refreshJobs();
@@ -79,7 +93,7 @@ function DashboardPage() {
       mountedRef.current = false;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [refreshJobs]);
+  }, [refreshJobs, loadInventory]);
 
   const inventoryOverview = useMemo(() => buildInventoryOverview(inventoryItems), [inventoryItems]);
 
@@ -98,9 +112,11 @@ function DashboardPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[2fr,1fr]">
-        <SectionCard title="Inventory" subtitle={`${inventoryItems.length} items`}>
+        <SectionCard title="Inventory" subtitle={inventoryError ? undefined : `${inventoryItems.length} items`}>
           {loadingInventory ? (
             <div className="py-8 text-center text-sm text-muted">Loading inventory...</div>
+          ) : inventoryError ? (
+            <LoadError what="inventory" onRetry={loadInventory} />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[620px] border-collapse text-left text-sm">
@@ -137,7 +153,10 @@ function DashboardPage() {
           )}
         </SectionCard>
 
-        <SectionCard title="Crafting Queue" subtitle="Live from Orders">
+        <SectionCard title="Crafting Queue" subtitle="Active and queued orders">
+          {jobsError ? (
+            <LoadError what="crafting jobs" onRetry={() => void refreshJobs()} />
+          ) : (
           <div className="space-y-3">
             <div>
               <h4 className="mb-2 text-sm font-medium">Active Jobs</h4>
@@ -215,24 +234,25 @@ function DashboardPage() {
                         <div>{job.timeLeft}</div>
                       </div>
 
-                      <div className="card-actions mt-3 flex gap-2">
-                       <div className="text-xs text-muted">
-  {(() => {
-    const parsedDate = job.createdDateTime ? new Date(job.createdDateTime) : null;
-    const isValidDate = parsedDate && !isNaN(parsedDate.getTime());
-    
-    return isValidDate 
-      ? `Created ${new Intl.DateTimeFormat('en-ZA', { dateStyle: 'short', timeStyle: 'short' }).format(parsedDate)}`
-      : 'Created: Date Unknown';
-  })()}
-</div>
-                      </div>
+                      {(() => {
+                        // Only show the created time when the API gave a valid date
+                        const parsedDate = job.createdDateTime ? new Date(job.createdDateTime) : null;
+                        if (!parsedDate || isNaN(parsedDate.getTime())) return null;
+                        return (
+                          <div className="card-actions mt-3 flex gap-2">
+                            <div className="text-xs text-muted">
+                              Created {new Intl.DateTimeFormat('en-ZA', { dateStyle: 'short', timeStyle: 'short' }).format(parsedDate)}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>
               )}
             </div>
           </div>
+          )}
         </SectionCard>
       </div>
     </div>

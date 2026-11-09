@@ -377,6 +377,30 @@ demo account (3.6).
 - **Tests:** New tests cover each change and fail against the previous code, apart from one that checks the login
   error still appears after a failed sign-in. Frontend 60 of 60 passing with a clean type check.
 
+### 2.30 Failures that looked like empty data, and silent order controls
+- **Problem:** When a list failed to load, the error went only to the developer console and the page showed its
+  normal empty state ("No active jobs", "No live inventory rows available yet"). An unreachable or sleeping server
+  looked like an empty warehouse. Pause, Cancel and Expedite showed nothing when they failed. The demo account is
+  refused every change, so for a visitor those buttons simply did nothing. On the free hosting tier the first
+  sign-in can take up to a minute with only "Signing in..." on screen. Placeholder text was visible: a made-up
+  name ("D. Dastardly") in the top bar before the real one loaded, "No users found — pull from API returned
+  empty.", "Live from Orders" and "Created: Date Unknown".
+- **Fix:**
+  - A shared `LoadError` box ("Couldn't load inventory. The server may be waking up, or your connection may be
+    down." with **Retry**) replaces the empty state when a load fails. It is used on the dashboard (inventory and
+    jobs), the inventory page, Active Jobs, the crafting queue, order history, blueprints, both Analytics cards
+    and the users list. Lists that refresh on a timer recover on their own once the server answers. The inventory
+    page and order history also gained a loading state; before, they said "no items" while loading.
+  - Pause, Cancel and Expedite show a notification when they fail, using the server's explanation when it gives
+    one (`utils/apiErrors.ts`). Blueprint saves do the same. For the demo account the order controls are
+    disabled, with a tooltip saying the demo is read-only.
+  - After five seconds of signing in, the login screen says the server is waking up and can take up to a minute.
+  - The top bar shows the user's name only once it is known. The placeholder strings are replaced with plain
+    wording, or removed when there is nothing to say.
+- **Tests:** New tests cover the load errors and Retry (dashboard, Active Jobs, users list), the server's reason on
+  a failed pause, disabled demo controls, the slow sign-in note, the missing placeholder name, and the error
+  helper. The seven new UI tests fail against the previous code. Frontend 72 of 72 passing with a clean type check.
+
 ---
 
 ## 3. Enhancement: secure, transactional crafting

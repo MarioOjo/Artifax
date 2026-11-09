@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import LoginPage from './LoginPage';
+import LoginPage, { SLOW_SIGN_IN_MS } from './LoginPage';
 import { loginEmployee } from '../../services/authApi';
 
 jest.mock('../../services/authApi', () => ({
@@ -27,5 +27,27 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Login' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Incorrect email or password.');
+  });
+
+  it('explains a slow sign-in while the server wakes up', async () => {
+    jest.useFakeTimers();
+    try {
+      (loginEmployee as jest.Mock).mockReturnValue(new Promise(() => {})); // never answers
+      const { container } = renderPage();
+
+      fireEvent.change(container.querySelector('input[type="email"]') as HTMLInputElement, { target: { value: 'user@artifax.local' } });
+      fireEvent.change(container.querySelector('input[type="password"]') as HTMLInputElement, { target: { value: 'secret' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Login' }));
+
+      expect(screen.queryByText(/Waking up the server/i)).not.toBeInTheDocument();
+
+      act(() => {
+        jest.advanceTimersByTime(SLOW_SIGN_IN_MS);
+      });
+
+      expect(screen.getByText(/Waking up the server/i)).toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

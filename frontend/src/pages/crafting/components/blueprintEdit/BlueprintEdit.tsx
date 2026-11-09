@@ -3,6 +3,7 @@ import Button from '../../../../components/common/Button';
 import FilterSelect from '../../../../components/common/FilterSelect';
 import { useApi, useThemeAwareIcon } from '../../../../hooks';
 import { showError, showSuccess } from '../../../../utils/toast';
+import { apiErrorMessage } from '../../../../utils/apiErrors';
 import './blueprintEdit.css';
 import unitIcon from '../../../../assets/images/uniitIcon.png';
 import unitIconWhite from '../../../../assets/images/uniitIconWhite.png';
@@ -184,7 +185,7 @@ const BlueprintEdit: FC<BlueprintEditProps> = ({ itemId, onCancel, onSaved }) =>
       onSaved();
     } catch (saveError) {
       console.error('Failed to save blueprint edit:', saveError);
-      showError('Unable to save blueprint changes. Please try again.');
+      showError(apiErrorMessage(saveError, 'Unable to save blueprint changes. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }

@@ -190,7 +190,7 @@
   border-color: rgba(15, 23, 42, 0.12);
 }
 
-.btn-cancel:hover {
+.btn-cancel:hover:not(:disabled) {
   background: var(--primary);
   color: var(--on-primary);
   border-color: transparent;
@@ -211,7 +211,7 @@
   color: var(--text);
 }
 
-.btn-action.pause:hover {
+.btn-action.pause:hover:not(:disabled) {
   background: var(--primary);
   color: var(--on-primary);
   border-color: transparent;
@@ -224,9 +224,22 @@
   border-color: transparent;
 }
 
-.btn-action.resume:hover {
+.btn-action.resume:hover:not(:disabled) {
   background: var(--surface);
   color: var(--primary);
   border-color: var(--border);
   box-shadow: 0 18px 30px rgba(15, 23, 42, 0.16);
+}
+/* Read-only demo: order controls are disabled and should look it */
+.btn-cancel:disabled,
+.btn-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+.toggle-switch input:disabled + .slider {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

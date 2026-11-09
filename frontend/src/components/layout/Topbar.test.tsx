@@ -3,9 +3,14 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Topbar from './Topbar';
 
+let mockCurrentUser: { name?: string; branchId?: number; branchName?: string } | null = null;
 jest.mock('../../utils/currentUser', () => ({
-  useCurrentUser: () => ({ name: 'Test User', branchId: 1, branchName: 'Head Office' }),
+  useCurrentUser: () => mockCurrentUser,
 }));
+
+beforeEach(() => {
+  mockCurrentUser = { name: 'Test User', branchId: 1, branchName: 'Head Office' };
+});
 
 jest.mock('../../services/authApi', () => ({
   getBranchById: jest.fn(),
@@ -27,5 +32,15 @@ describe('Topbar', () => {
     expect(screen.getByRole('checkbox', { name: /Switch to (light|dark) theme/i })).toBeInTheDocument();
     expect(screen.getByText('Head Office')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Head Office' })).not.toBeInTheDocument();
+  });
+
+  it('shows the signed-in name, and no placeholder name when it is unknown', () => {
+    const { unmount } = renderAt('/dashboard');
+    expect(screen.getByText('Test User')).toBeInTheDocument();
+    unmount();
+
+    mockCurrentUser = null;
+    renderAt('/dashboard');
+    expect(screen.queryByText(/Dastardly/i)).not.toBeInTheDocument();
   });
 });

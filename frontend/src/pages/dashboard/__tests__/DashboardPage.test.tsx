@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import DashboardPage from '../DashboardPage';
 import * as inventoryApi from '../../../services/inventoryApi';
 import { getCraftingQueue } from '../../../services/orderApi';
@@ -36,6 +36,22 @@ describe('DashboardPage', () => {
     expect(await screen.findByText('No active jobs')).toBeInTheDocument();
     expect(screen.getByText('No queued jobs')).toBeInTheDocument();
     expect(screen.queryByText('Loading jobs...')).not.toBeInTheDocument();
+  });
+
+  it('shows a load error with Retry when inventory fails to load', async () => {
+    (inventoryApi.getInventoryItems as jest.Mock).mockRejectedValueOnce(new Error('Network Error'));
+
+    render(<DashboardPage />);
+
+    expect(await screen.findByText(/Couldn't load inventory/i)).toBeInTheDocument();
+    expect(screen.queryByText(/No live inventory rows/i)).not.toBeInTheDocument();
+
+    (inventoryApi.getInventoryItems as jest.Mock).mockResolvedValueOnce([
+      { id: 1, name: 'Retried Item', sku: 'R-1', category: 'Testing', quantity: 3, minStock: 1, location: 'Zone R', status: 'OK', tab: 'testing' },
+    ]);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText('Retried Item')).toBeInTheDocument();
   });
 
   it('renders preview rows from API', async () => {

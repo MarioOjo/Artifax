@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import userIcon from '../../../../assets/images/userIcon.png';
 import './UserList.css';
+import LoadError from '../../../../components/common/LoadError';
 
 type User = {
   id: number;
@@ -17,12 +18,15 @@ interface UserListProps {
   // `loading` is passed from the parent `Users` component. It reflects the GET /api/User request state.
   // We render a small footer status so the overall card height doesn't jump when loading starts/stops.
   loading: boolean;
+  // True when the last users request failed; the list shows an error with Retry instead of "no users"
+  loadError?: boolean;
+  onRetry?: () => void;
   onSelectUser: (id: number) => void;
   onCreateNewUser: () => void;
   branchMap: Record<number, string>;
 }
 
-function UserList({ users, selectedUserId, loading, onSelectUser, onCreateNewUser, branchMap }: UserListProps) {
+function UserList({ users, selectedUserId, loading, loadError = false, onRetry, onSelectUser, onCreateNewUser, branchMap }: UserListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const selectedRef = useRef<HTMLElement | null>(null);
 
@@ -64,9 +68,11 @@ function UserList({ users, selectedUserId, loading, onSelectUser, onCreateNewUse
       </header>
 
       <div className="userlist-items">
-        {filteredUsers.length === 0 ? (
+        {loadError && users.length === 0 ? (
+          <LoadError what="users" onRetry={onRetry} />
+        ) : filteredUsers.length === 0 ? (
           <div className="userlist-empty">
-            <p>{searchQuery.trim() ? 'No users match your search.' : 'No users found — pull from API returned empty.'}</p>
+            <p>{searchQuery.trim() ? 'No users match your search.' : loading ? '' : 'No users yet. Create one with the form.'}</p>
           </div>
         ) : (
           filteredUsers.map((user) => (

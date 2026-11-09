@@ -1,7 +1,10 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './LoginPage.css';
 import { loginEmployee } from '../../services/authApi';
+
+// How long a sign-in can take before the "waking up the server" note appears
+export const SLOW_SIGN_IN_MS = 5000;
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -15,6 +18,17 @@ function LoginPage() {
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const [passwordTouched, setPasswordTouched] = useState(false);
+  // The free-tier API sleeps when idle; if sign-in is slow, say why instead of leaving a silent spinner
+  const [slowSignIn, setSlowSignIn] = useState(false);
+
+  useEffect(() => {
+    if (!isSubmitting) {
+      setSlowSignIn(false);
+      return undefined;
+    }
+    const timer = setTimeout(() => setSlowSignIn(true), SLOW_SIGN_IN_MS);
+    return () => clearTimeout(timer);
+  }, [isSubmitting]);
 
   // Email validation
   const emailError = useMemo(() => {
@@ -88,7 +102,7 @@ function LoginPage() {
         </header>
 
         <div className="login-card-body">
-          <div className="login-section-heading">Required User Information</div>
+          <div className="login-section-heading">Sign in to your account</div>
 
           <form className="login-form" onSubmit={handleSubmit} noValidate>
             
@@ -192,6 +206,11 @@ function LoginPage() {
             <button type="submit" className="login-submit" disabled={!isFormValid || isSubmitting}>
               {isSubmitting ? 'Signing in...' : 'Login'}
             </button>
+            {slowSignIn ? (
+              <p className="login-field-hint" role="status">
+                Waking up the server. The first sign-in after a quiet spell can take up to a minute.
+              </p>
+            ) : null}
           </form>
         </div>
       </section>
