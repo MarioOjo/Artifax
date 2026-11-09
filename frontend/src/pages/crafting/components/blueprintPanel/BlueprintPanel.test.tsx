@@ -147,7 +147,7 @@ describe('BlueprintPanel', () => {
       />
     );
 
-    await waitFor(() => expect(screen.getByText(/Error: Network error/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Couldn't load blueprints/i)).toBeInTheDocument());
     expect(screen.queryByText(/Loading blueprints.../i)).not.toBeInTheDocument();
   });
 

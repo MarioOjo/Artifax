@@ -217,9 +217,12 @@ function Topbar() {
           <div className="shrink-0 whitespace-nowrap rounded-[8px] border border-border bg-surface px-3 py-2 text-sm font-medium nav-pill text-muted sm:px-3.5 sm:text-[0.95rem]" title="Your branch">
             {branchName ?? (currentUser?.branchId ? `Branch ${currentUser.branchId}` : 'Branch')}
           </div>
-          <div className="shrink-0 whitespace-nowrap rounded-[8px] border border-border bg-surface px-3 py-2 text-sm font-medium nav-pill text-text sm:px-3.5 sm:text-[0.95rem]">
-            {currentUser?.name ?? 'D. Dastardly'}
-          </div>
+          {/* Only shown once the signed-in user's name is known (no placeholder name) */}
+          {currentUser?.name ? (
+            <div className="shrink-0 whitespace-nowrap rounded-[8px] border border-border bg-surface px-3 py-2 text-sm font-medium nav-pill text-text sm:px-3.5 sm:text-[0.95rem]">
+              {currentUser.name}
+            </div>
+          ) : null}
         </div>
       </div>
     </header>

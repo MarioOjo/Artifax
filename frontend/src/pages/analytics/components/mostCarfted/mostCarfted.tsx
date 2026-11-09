@@ -4,6 +4,7 @@ import unitIcon from '../../../../assets/images/uniitIcon.png';
 import unitIconWhite from '../../../../assets/images/uniitIconWhite.png';
 import FilterSelect from '../../../../components/common/FilterSelect';
 import { useApi, useThemeAwareIcon } from '../../../../hooks';
+import LoadError from '../../../../components/common/LoadError';
 
 type SortOrder = 'high' | 'low';
 
@@ -30,10 +31,14 @@ const MostCrafted: React.FC = () => {
   const api = useApi();
   const [sortOrder, setSortOrder] = useState<SortOrder>('high');
   const [blueprints, setBlueprints] = useState<CraftedBlueprint[]>([]);
+  // Load status for the list; bumping loadAttempt re-runs the load (Retry)
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const unitIconSrc = useThemeAwareIcon(unitIcon, unitIconWhite);
 
   useEffect(() => {
     const loadMostCrafted = async () => {
+      setLoadStatus('loading');
       try {
         const response = await api.get<any[]>('/Order');
         const orders = response.data ?? [];
@@ -58,14 +63,16 @@ const MostCrafted: React.FC = () => {
         setBlueprints(
           Array.from(totals.entries()).map(([name, crafted]) => ({ name, crafted })),
         );
+        setLoadStatus('loaded');
       } catch (error) {
         console.error('Unable to load most crafted blueprints', error);
         setBlueprints([]);
+        setLoadStatus('error');
       }
     };
 
     loadMostCrafted();
-  }, [api]);
+  }, [api, loadAttempt]);
 
   const sortedBlueprints = useMemo(() => {
     return [...blueprints].sort((a, b) => {
@@ -92,7 +99,11 @@ const MostCrafted: React.FC = () => {
       </div>
 
       <div className="blueprint-list most-crafted-list">
-        {sortedBlueprints.length === 0 ? (
+        {loadStatus === 'loading' ? (
+          <p className="most-crafted-empty">Loading crafted blueprints...</p>
+        ) : loadStatus === 'error' ? (
+          <LoadError what="crafted blueprints" onRetry={() => setLoadAttempt((attempt) => attempt + 1)} />
+        ) : sortedBlueprints.length === 0 ? (
           <p className="most-crafted-empty">No completed craft data available yet.</p>
         ) : (
           sortedBlueprints.map((blueprint) => (

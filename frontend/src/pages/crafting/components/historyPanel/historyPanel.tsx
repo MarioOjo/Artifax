@@ -6,6 +6,7 @@ import unitIcon from '../../../../assets/images/uniitIcon.png';
 import unitIconWhite from '../../../../assets/images/uniitIconWhite.png';
 import viewIcon from '../../../../assets/images/View Icon.png';
 import { useApi, useThemeAwareIcon } from '../../../../hooks';
+import LoadError from '../../../../components/common/LoadError';
 
 interface OrderHistoryDto {
   orderID: number;
@@ -64,9 +65,13 @@ const HistoryPanel: FC = () => {
   const [loadingIngredientsOrderId, setLoadingIngredientsOrderId] = useState<number | null>(null);
   const unitIconSrc = useThemeAwareIcon(unitIcon, unitIconWhite);
   const ITEMS_PER_PAGE = 10;
+  // Load status for the history list; bumping loadAttempt re-runs the load (Retry)
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     const loadHistory = async (): Promise<void> => {
+      setLoadStatus('loading');
       try {
         const [ordersResponse, usersResponse] = await Promise.all([
           api.get<OrderHistoryDto[]>('/Order'),
@@ -87,13 +92,15 @@ const HistoryPanel: FC = () => {
           })
           .map((o) => ({ ...o, employeeName: o.employeeName ?? employeeNames[o.employeeID ?? 0] }));
         setHistoryData(historyOrders);
+        setLoadStatus('loaded');
       } catch (error) {
         console.error('Failed to load order history', error);
         setHistoryData([]);
+        setLoadStatus('error');
       }
     };
     void loadHistory();
-  }, [api]);
+  }, [api, loadAttempt]);
 
   const statusCounts: StatusCounts = useMemo(() => {
     return historyData.reduce(
@@ -327,6 +334,13 @@ const HistoryPanel: FC = () => {
             })}
           </tbody>
         </table>
+        {loadStatus === 'loading' ? (
+          <p className="empty-text">Loading order history...</p>
+        ) : loadStatus === 'error' ? (
+          <LoadError what="order history" onRetry={() => setLoadAttempt((attempt) => attempt + 1)} />
+        ) : filteredData.length === 0 ? (
+          <p className="empty-text">{historyData.length === 0 ? 'No completed or cancelled orders yet.' : 'No orders match your filters.'}</p>
+        ) : null}
       </div>
 
       <div className="history-footer">

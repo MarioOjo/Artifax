@@ -6,6 +6,7 @@ import { useApi, useThemeAwareIcon } from '../../../../hooks';
 import { Blueprint, BlueprintMaterial } from '../craftingData';
 import FilterSelect from '../../../../components/common/FilterSelect';
 import { useCurrentUser } from '../../../../utils/currentUser';
+import LoadError from '../../../../components/common/LoadError';
 
 interface Category {
   id: string;
@@ -169,7 +170,7 @@ const BlueprintPanel: FC<BlueprintPanelProps> = ({
       </div>
 
       {loading && <div className="blueprint-loading">Loading blueprints...</div>}
-      {error && <div className="blueprint-error">Error: {error}</div>}
+      {error && !loading && <LoadError what="blueprints" onRetry={() => void fetchBlueprintsFromApi()} />}
 
       <div className="blueprint-list">
         {filteredBlueprints.map((blueprint) => {

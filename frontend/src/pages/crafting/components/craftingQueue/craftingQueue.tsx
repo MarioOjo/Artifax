@@ -5,6 +5,7 @@ import unitIconWhite from '../../../../assets/images/uniitIconWhite.png';
 import { useApi, useThemeAwareIcon } from '../../../../hooks';
 import { useCurrentUser } from '../../../../utils/currentUser';
 import { calculateProgress, formatTimeLeft, normalizeQueueStatus, QueueJobStatus } from '../../../../services/craftingUtils';
+import LoadError from '../../../../components/common/LoadError';
 
 const itemsPerPage = 3;
 
@@ -56,6 +57,11 @@ const CraftingQueue: FC = () => {
   const [page, setPage] = useState<number>(1);
   const [activeJobs, setActiveJobs] = useState<CraftingJob[]>([]);
   const [queuedJobs, setQueuedJobs] = useState<CraftingJob[]>([]);
+  const [loadError, setLoadError] = useState(false);
+  // The queue listens for this event to reload, so Retry reuses it
+  const retryLoad = (): void => {
+    window.dispatchEvent(new CustomEvent('crafting-order-updated'));
+  };
 
   const unitIconSrc = useThemeAwareIcon(unitIcon, unitIconWhite);
 
@@ -132,8 +138,10 @@ const CraftingQueue: FC = () => {
 
         setActiveJobs(jobs.filter((job) => job.status === 'Active' || job.status === 'Paused'));
         setQueuedJobs(jobs.filter((job) => job.status === 'Queued'));
+        setLoadError(false);
       } catch (error) {
         console.error('Failed to load crafting queue orders', error);
+        if (isMounted) setLoadError(true);
       }
     };
 
@@ -189,7 +197,9 @@ const CraftingQueue: FC = () => {
         <p className="limit-note">Maximum 3 active crafts per location</p>
       </div>
 
-      {page === 1 ? (
+      {loadError && activeJobs.length === 0 && queuedJobs.length === 0 ? (
+        <LoadError what="the crafting queue" onRetry={retryLoad} />
+      ) : page === 1 ? (
         <div className="queue-section">
           <h4 className="queue-section-title">Active Crafts</h4>
           {activeJobs.length === 0 && <p className="empty-state">No active crafts right now.</p>}

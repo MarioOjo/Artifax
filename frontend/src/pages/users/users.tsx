@@ -33,6 +33,7 @@ const Users: React.FC = () => {
   const [branchMap, setBranchMap] = useState<Record<number, string>>({});
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   // ensure we only try fetching users once per page load
   const usersFetchedRef = useRef(false);
 
@@ -87,10 +88,11 @@ const Users: React.FC = () => {
       const combinedUsers = [...adminUsers, ...employeeUsers];
 
       setUsers(combinedUsers);
+      setLoadError(false);
       return combinedUsers;
     } catch (err) {
       console.error('Fetch users failed', err);
-      showError('Unable to load users. Please refresh the page.');
+      setLoadError(true);
       return [];
     } finally {
       setLoading(false);
@@ -288,6 +290,11 @@ const Users: React.FC = () => {
               users={users}
               selectedUserId={selectedUserId}
               loading={loading}
+              loadError={loadError}
+              onRetry={() => {
+                setLoading(true);
+                void fetchUsers();
+              }}
               onSelectUser={handleSelectUser}
               onCreateNewUser={handleCreateNewUser}
               branchMap={branchMap}
