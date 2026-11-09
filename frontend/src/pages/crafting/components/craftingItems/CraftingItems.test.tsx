@@ -2,20 +2,86 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import CraftingItems from './craftingItems';
 import { useApi } from '../../../../hooks';
+import { showError } from '../../../../utils/toast';
 
 jest.mock('../../../../hooks', () => ({
   useApi: jest.fn(),
   useThemeAwareIcon: (icon: string) => icon,
 }));
 
+// Signed-in user for each test; null (no session) unless a test sets it
+let mockCurrentUser: { name: string; role: string; branchId?: number } | null = null;
+jest.mock('../../../../utils/currentUser', () => ({
+  useCurrentUser: () => mockCurrentUser,
+}));
+
+jest.mock('../../../../utils/toast', () => ({
+  showError: jest.fn(),
+  showSuccess: jest.fn(),
+}));
+
 const mockedUseApi = useApi as jest.MockedFunction<typeof useApi>;
 const mockApi = { get: jest.fn(), put: jest.fn() };
+
+// One active order, enough to render a job card with its controls
+const singleActiveOrder = (url: string) => {
+  if (url.endsWith('/Order')) {
+    return Promise.resolve({ data: [
+      { orderID: 1, itemID: 101, itemName: 'Circuit Board A1', quantity: 2, createdDateTime: '2025-01-01T08:00:00Z', totalTime: 120, timeElapsed: 15, status: 'Active', employeeID: 1 },
+    ] });
+  }
+  if (url.endsWith('/User')) return Promise.resolve({ data: [{ employeeId: 1, employeeName: 'Alice' }] });
+  if (url.endsWith('/Branch')) return Promise.resolve({ data: [{ branchID: 1, branchName: 'Head Office' }] });
+  if (url.includes('/Item/itemIngredient/item/')) return Promise.resolve({ data: [] });
+  return Promise.reject(new Error('Unknown URL'));
+};
 
 describe('CraftingItems', () => {
   beforeEach(() => {
     mockApi.get.mockReset();
     mockApi.put.mockReset();
     mockedUseApi.mockReturnValue(mockApi as any);
+    mockCurrentUser = null;
+    (showError as jest.Mock).mockReset();
+  });
+
+  it('shows the server reason when pausing an order fails', async () => {
+    mockApi.get.mockImplementation(singleActiveOrder);
+    mockApi.put.mockRejectedValue(Object.assign(new Error('Request failed with status code 409'), {
+      isAxiosError: true,
+      response: { status: 409, data: { message: 'This order has already finished.' } },
+    }));
+
+    render(<CraftingItems />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Pause/i }));
+
+    await waitFor(() => expect(showError).toHaveBeenCalledWith('This order has already finished.'));
+  });
+
+  it('disables order controls for the read-only demo account', async () => {
+    mockCurrentUser = { name: 'Demo', role: 'Demo' };
+    mockApi.get.mockImplementation(singleActiveOrder);
+
+    render(<CraftingItems />);
+
+    expect(await screen.findByRole('button', { name: /Pause/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Cancel/i })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: /Order Expedite/i })).toBeDisabled();
+  });
+
+  it('shows a load error with Retry instead of "No active jobs" when loading fails', async () => {
+    mockApi.get.mockRejectedValue(new Error('Network Error'));
+
+    render(<CraftingItems />);
+
+    expect(await screen.findByText(/Couldn't load active jobs/i)).toBeInTheDocument();
+    expect(screen.queryByText(/No active jobs available/i)).not.toBeInTheDocument();
+
+    mockApi.get.mockImplementation(singleActiveOrder);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText(/Circuit Board A1/i)).toBeInTheDocument();
   });
 
   it('renders active crafting jobs and action buttons from backend orders', async () => {

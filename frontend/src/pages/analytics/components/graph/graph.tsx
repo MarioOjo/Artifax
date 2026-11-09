@@ -15,6 +15,7 @@ import { Line } from 'react-chartjs-2';
 import './graph.css';
 import FilterSelect from '../../../../components/common/FilterSelect';
 import { useApi } from '../../../../hooks';
+import LoadError from '../../../../components/common/LoadError';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler, Legend);
 
@@ -140,6 +141,8 @@ const GraphCard: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [showSearchOptions, setShowSearchOptions] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  // Bumping loadAttempt re-runs the load (Retry)
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const searchWrapperRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -188,14 +191,14 @@ const GraphCard: React.FC = () => {
         }
       } catch (loadError) {
         console.error('Unable to load analytics data', loadError);
-        setError('Unable to load analytics data. Please try again later.');
+        setError('analytics data');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadData();
-  }, [api]);
+  }, [api, loadAttempt]);
 
   const selectedItem = useMemo(
     () => items.find((item) => item.itemID === selectedItemId) ?? items[0] ?? null,
@@ -380,7 +383,7 @@ const GraphCard: React.FC = () => {
       {isLoading ? (
         <p>Loading analytics data...</p>
       ) : error ? (
-        <p>{error}</p>
+        <LoadError what={error} onRetry={() => setLoadAttempt((attempt) => attempt + 1)} />
       ) : (
         <>
           <div className="graph-figure">

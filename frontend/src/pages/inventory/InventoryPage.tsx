@@ -5,6 +5,7 @@ import SearchInput from '../../components/common/SearchInput';
 import SectionCard from '../../components/common/SectionCard';
 import StatCard from '../../components/common/StatCard';
 import StatusBadge from '../../components/common/StatusBadge';
+import LoadError from '../../components/common/LoadError';
 import Tabs from '../../components/common/Tabs';
 import AlertStrip from '../../components/layout/AlertStrip';
 import PageHeader from '../../components/layout/PageHeader';
@@ -38,6 +39,9 @@ function InventoryPage() {
   const [savingEditRowKey, setSavingEditRowKey] = useState<string | null>(null);
   const [creatingItem, setCreatingItem] = useState(false);
   const [createItemOpen, setCreateItemOpen] = useState(false);
+  // Load status for the item list; bumping loadAttempt re-runs the load (Retry)
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [ingredientItem, setIngredientItem] = useState<InventoryCreatedItem | null>(null);
 
   // The logged-in user's branch (stored at login) scopes the low-stock alerts
@@ -48,12 +52,14 @@ function InventoryPage() {
     let mounted = true;
 
     // Fetch Inventory
+    setLoadStatus('loading');
     Promise.all([getInventoryOverview(), getItems()])
       .then(([overview, items]) => {
         if (mounted) {
           setInventoryItems(overview.items);
           setInventoryOverview(overview);
           setCategoryOptions(getItemCategoryOptions(items));
+          setLoadStatus('loaded');
         }
       })
       .catch((error) => {
@@ -61,13 +67,14 @@ function InventoryPage() {
         if (mounted) {
           setInventoryItems([]);
           setCategoryOptions([]);
+          setLoadStatus('error');
         }
       });
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadAttempt]);
 
   const closeExpandedView = (): void => {
     setExpandedRowKey(null);
@@ -364,7 +371,11 @@ function InventoryPage() {
               </tbody>
             </table>
 
-            {filteredItems.length === 0 ? (
+            {loadStatus === 'loading' ? (
+              <p className="py-6 text-center text-sm text-muted">Loading inventory...</p>
+            ) : loadStatus === 'error' ? (
+              <LoadError what="inventory" onRetry={() => setLoadAttempt((attempt) => attempt + 1)} className="mt-4" />
+            ) : filteredItems.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted">No items match your current filters.</p>
             ) : null}
           </div>

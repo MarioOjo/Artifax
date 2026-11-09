@@ -5,6 +5,9 @@ import unitIconWhite from '../../../../assets/images/uniitIconWhite.png';
 import { useApi, useThemeAwareIcon } from '../../../../hooks';
 import { useCurrentUser } from '../../../../utils/currentUser';
 import { calculateProgress, formatTimeLeft, normalizeQueueStatus, QueueJobStatus } from '../../../../services/craftingUtils';
+import LoadError from '../../../../components/common/LoadError';
+import { apiErrorMessage, isReadOnlyDemo, READ_ONLY_MESSAGE } from '../../../../utils/apiErrors';
+import { showError } from '../../../../utils/toast';
 
 interface TiltsState {
   [key: string]: string;
@@ -65,6 +68,9 @@ const CraftingItems: FC = () => {
   const currentUser = useCurrentUser();
   const [tilts, setTilts] = useState<TiltsState>({});
   const [activeJobs, setActiveJobs] = useState<CraftingJob[]>([]);
+  const [loadError, setLoadError] = useState(false);
+  // The demo account cannot change orders, so its controls are disabled up front instead of failing on click
+  const readOnly = isReadOnlyDemo(currentUser);
 
   const ORDER_REFRESH_INTERVAL_MS = 60_000;
 
@@ -163,8 +169,10 @@ const CraftingItems: FC = () => {
           materials: ingredientsByItemId[job.itemID] ?? job.materials,
         }))
       );
+      setLoadError(false);
     } catch (error) {
       console.error('Unable to load crafting items orders', error);
+      setLoadError(true);
     }
   }, [api, currentUser]);
 
@@ -228,6 +236,7 @@ const CraftingItems: FC = () => {
       await loadActiveJobs();
     } catch (error) {
       console.error(`Unable to cancel order ${job.orderID}`, error);
+      showError(apiErrorMessage(error, `Unable to cancel ${job.name}. Please try again.`));
     }
   };
 
@@ -239,6 +248,7 @@ const CraftingItems: FC = () => {
       await loadActiveJobs();
     } catch (error) {
       console.error(`Unable to update order ${job.orderID} status to ${nextStatus}`, error);
+      showError(apiErrorMessage(error, `Unable to ${nextStatus === 'Paused' ? 'pause' : 'resume'} ${job.name}. Please try again.`));
     }
   };
 
@@ -256,12 +266,17 @@ const CraftingItems: FC = () => {
       await loadActiveJobs();
     } catch (error) {
       console.error(`Unable to update expedite for order ${job.orderID}`, error);
+      showError(apiErrorMessage(error, `Unable to change expedite for ${job.name}. Please try again.`));
     }
   };
 
   return (
     <div className="active-grid">
-      {activeJobs.length === 0 && <p className="empty-state">No active jobs available.</p>}
+      {loadError && activeJobs.length === 0 ? (
+        <LoadError what="active jobs" onRetry={() => void loadActiveJobs()} />
+      ) : activeJobs.length === 0 ? (
+        <p className="empty-state">No active jobs available.</p>
+      ) : null}
       {activeJobs.map((job) => (
         <div
           key={job.orderID}
@@ -301,6 +316,8 @@ const CraftingItems: FC = () => {
                 <input
                   type="checkbox"
                   checked={job.expedited}
+                  disabled={readOnly}
+                  title={readOnly ? READ_ONLY_MESSAGE : undefined}
                   onChange={() => void handleToggleExpedite(job)}
                   aria-label={`Order Expedite for ${job.name}`}
                 />
@@ -323,12 +340,20 @@ const CraftingItems: FC = () => {
           </div>
 
           <div className="card-actions">
-            <button className="btn-cancel" type="button" onClick={() => void handleCancel(job)}>
+            <button
+              className="btn-cancel"
+              type="button"
+              disabled={readOnly}
+              title={readOnly ? READ_ONLY_MESSAGE : undefined}
+              onClick={() => void handleCancel(job)}
+            >
               Cancel
             </button>
             <button
               className={`btn-action ${job.status === 'Paused' ? 'resume' : 'pause'}`}
               type="button"
+              disabled={readOnly}
+              title={readOnly ? READ_ONLY_MESSAGE : undefined}
               onClick={() => handlePauseResume(job)}
             >
               {job.status === 'Paused' ? 'Resume' : 'Pause'}

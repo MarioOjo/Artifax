@@ -86,4 +86,25 @@ describe('UserList', () => {
 
     expect(screen.getByText(/No users match your search\./i)).toBeInTheDocument();
   });
+
+  it('shows a load error with Retry instead of an empty list when loading fails', () => {
+    const onRetry = jest.fn();
+    render(
+      <UserList
+        users={[]}
+        selectedUserId={null}
+        loading={false}
+        loadError
+        onRetry={onRetry}
+        onSelectUser={onSelectUser}
+        onCreateNewUser={onCreateNewUser}
+        branchMap={branchMap}
+      />
+    );
+
+    expect(screen.getByText(/Couldn't load users/i)).toBeInTheDocument();
+    expect(screen.queryByText(/pull from API/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalled();
+  });
 });

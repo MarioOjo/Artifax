@@ -3,6 +3,7 @@ import Button from '../../../../components/common/Button';
 import FilterSelect from '../../../../components/common/FilterSelect';
 import { useApi, useThemeAwareIcon } from '../../../../hooks';
 import { showError, showSuccess } from '../../../../utils/toast';
+import { apiErrorMessage } from '../../../../utils/apiErrors';
 import './newBlueprint.css';
 import unitIcon from '../../../../assets/images/uniitIcon.png';
 import unitIconWhite from '../../../../assets/images/uniitIconWhite.png';
@@ -193,7 +194,7 @@ const NewBlueprint: FC<NewBlueprintProps> = ({ onCancel }) => {
       onCancel();
     } catch (error) {
       console.error('Error creating blueprint:', error);
-      showError('Unable to save blueprint. Please fix the issue and try again.');
+      showError(apiErrorMessage(error, 'Unable to save blueprint. Please fix the issue and try again.'));
     } finally {
       setIsSubmitting(false);
     }
