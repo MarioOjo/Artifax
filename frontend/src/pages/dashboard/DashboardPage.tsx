@@ -17,6 +17,8 @@ function DashboardPage() {
   const [loadingInventory, setLoadingInventory] = useState<boolean>(true);
   const [activeJobs, setActiveJobs] = useState<QueueJob[]>([]);
   const [queuedJobs, setQueuedJobs] = useState<QueueJob[]>([]);
+  // True until the first jobs request finishes, so "No active jobs" is not shown while loading
+  const [loadingJobs, setLoadingJobs] = useState<boolean>(true);
   const isFetchingRef = useRef(false);
   const mountedRef = useRef(true);
 
@@ -45,6 +47,7 @@ function DashboardPage() {
       }
     } finally {
       isFetchingRef.current = false;
+      if (mountedRef.current) setLoadingJobs(false);
     }
   }, []);
 
@@ -138,7 +141,9 @@ function DashboardPage() {
           <div className="space-y-3">
             <div>
               <h4 className="mb-2 text-sm font-medium">Active Jobs</h4>
-              {activeJobs.length === 0 ? (
+              {loadingJobs ? (
+                <div className="rounded-xl border border-border bg-app p-3 text-sm text-muted">Loading jobs...</div>
+              ) : activeJobs.length === 0 ? (
                 <div className="rounded-xl border border-border bg-app p-3 text-sm text-muted">No active jobs</div>
               ) : (
                 <div className="space-y-2">
@@ -187,7 +192,9 @@ function DashboardPage() {
 
             <div>
               <h4 className="mb-2 text-sm font-medium">Queued Jobs</h4>
-              {queuedJobs.length === 0 ? (
+              {loadingJobs ? (
+                <div className="rounded-xl border border-border bg-app p-3 text-sm text-muted">Loading jobs...</div>
+              ) : queuedJobs.length === 0 ? (
                 <div className="rounded-xl border border-border bg-app p-3 text-sm text-muted">No queued jobs</div>
               ) : (
                 <div className="space-y-2">

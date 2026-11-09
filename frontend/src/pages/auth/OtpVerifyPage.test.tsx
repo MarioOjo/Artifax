@@ -19,7 +19,8 @@ describe('OtpVerifyPage', () => {
     (GetOtpQrCode as jest.Mock).mockResolvedValue({ qrCodeUri: 'otpauth://totp/ArtifaxApp:a?secret=ABC' });
     renderPage();
 
-    fireEvent.click(screen.getByText(/First time\?/i));
+    // A real button, so keyboard users can reach it
+    fireEvent.click(screen.getByRole('button', { name: /First time\?/i }));
 
     expect(await screen.findByText(/Scan this code/i)).toBeInTheDocument();
   });

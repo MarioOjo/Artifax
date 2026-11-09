@@ -194,7 +194,7 @@ function OtpVerifyPage() {
               <p className="login-subtitle">Open Google Authenticator on your mobile device to retrieve your login token.</p>
 
               {hasApp ? (
-                <p onClick={() => setHasApp(false)} className='mb-5 underline hover:cursor-pointer w-fit text-primary-dark'>First time?</p>
+                <button type="button" onClick={() => setHasApp(false)} className='mb-5 underline hover:cursor-pointer w-fit text-primary-dark bg-transparent border-0 p-0'>First time?</button>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
                   {qrUri ? (

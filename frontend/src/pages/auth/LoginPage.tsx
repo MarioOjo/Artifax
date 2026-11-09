@@ -171,20 +171,22 @@ function LoginPage() {
               {((submitAttempted || passwordTouched) && passwordError) ? <p id="password-hint" className="login-field-hint error">{passwordError}</p> : null}
             </label>
 
-            {/* Alert Message Box */}
-            <div className={`login-alert ${submitError ? 'error' : ''}`} role="alert" aria-live="polite">
-              <div className="login-alert-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 8.3v4.2" />
-                  <path d="M12 15.8h.01" />
-                </svg>
+            {/* Alert Message Box: only shown once a sign-in attempt has failed */}
+            {submitError ? (
+              <div className="login-alert error" role="alert">
+                <div className="login-alert-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 8.3v4.2" />
+                    <path d="M12 15.8h.01" />
+                  </svg>
+                </div>
+                <div>
+                  <strong>Login error</strong>
+                  <p>{submitError}</p>
+                </div>
               </div>
-              <div>
-                <strong>{submitError ? 'Login error' : 'Input required'}</strong>
-                <p>{submitError || 'Enter details to continue.'}</p>
-              </div>
-            </div>
+            ) : null}
 
             {/* Submit button */}
             <button type="submit" className="login-submit" disabled={!isFormValid || isSubmitting}>

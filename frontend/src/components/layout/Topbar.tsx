@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useCurrentUser } from '../../utils/currentUser';
 import { getBranchById } from '../../services/authApi';
 
@@ -124,18 +124,15 @@ function Topbar() {
           <ol className="flex items-center gap-2 text-sm font-medium text-muted sm:text-base">
             {breadcrumbItems.map((item, index) => {
               const isLast = index === breadcrumbItems.length - 1;
-
-              return (
-                <li key={`${item.label}-${index}`} className="flex min-w-0 items-center gap-2">
-                  {index > 0 ? <span className="text-border/90">/</span> : null}
-                  <span
-                    className={`inline-flex max-w-[150px] items-center gap-2 rounded-full border px-4 py-1.5 transition ${
-                      isLast
-                        ? 'border-primary/30 bg-surface text-text shadow-[0_6px_18px_rgba(15,23,42,0.08)]'
-                        : 'border-border bg-surface text-muted'
-                    }`}
-                    title={item.label}
-                  >
+              // The home crumb links back to the dashboard unless it is the current page
+              const linksHome = item.isHome && !isLast;
+              const crumbClassName = `inline-flex max-w-[150px] items-center gap-2 rounded-full border px-4 py-1.5 transition ${
+                isLast
+                  ? 'border-primary/30 bg-surface text-text shadow-[0_6px_18px_rgba(15,23,42,0.08)]'
+                  : 'border-border bg-surface text-muted'
+              } ${linksHome ? 'hover:border-primary hover:text-text' : ''}`;
+              const crumbContent = (
+                <>
                     {item.isHome ? (
                       <svg
                         className="h-4 w-4 shrink-0"
@@ -152,7 +149,21 @@ function Topbar() {
                       </svg>
                     ) : null}
                     <span className="truncate">{item.label}</span>
-                  </span>
+                </>
+              );
+
+              return (
+                <li key={`${item.label}-${index}`} className="flex min-w-0 items-center gap-2">
+                  {index > 0 ? <span className="text-border/90" aria-hidden="true">/</span> : null}
+                  {linksHome ? (
+                    <Link to="/dashboard" className={crumbClassName} title={item.label}>
+                      {crumbContent}
+                    </Link>
+                  ) : (
+                    <span className={crumbClassName} title={item.label} aria-current={isLast ? 'page' : undefined}>
+                      {crumbContent}
+                    </span>
+                  )}
                 </li>
               );
             })}
@@ -165,6 +176,8 @@ function Topbar() {
               type="checkbox"
               className="theme-controller absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
               value="synthwave"
+              aria-label={isSynthwave ? 'Switch to light theme' : 'Switch to dark theme'}
+              title={isSynthwave ? 'Switch to light theme' : 'Switch to dark theme'}
               checked={isSynthwave}
               onChange={handleThemeToggle}
             />
@@ -200,9 +213,10 @@ function Topbar() {
               </svg>
             </span>
           </label>
-          <button className="shrink-0 whitespace-nowrap rounded-[8px] border border-border bg-surface px-3 py-2 text-sm font-medium nav-pill text-muted transition hover:border-primary hover:text-text sm:px-3.5 sm:text-[0.95rem]" title={branchName ?? (currentUser?.branchId ? `Branch ${currentUser.branchId}` : 'Branch')}>
+          {/* Informational only: shows the branch the signed-in user works at */}
+          <div className="shrink-0 whitespace-nowrap rounded-[8px] border border-border bg-surface px-3 py-2 text-sm font-medium nav-pill text-muted sm:px-3.5 sm:text-[0.95rem]" title="Your branch">
             {branchName ?? (currentUser?.branchId ? `Branch ${currentUser.branchId}` : 'Branch')}
-          </button>
+          </div>
           <div className="shrink-0 whitespace-nowrap rounded-[8px] border border-border bg-surface px-3 py-2 text-sm font-medium nav-pill text-text sm:px-3.5 sm:text-[0.95rem]">
             {currentUser?.name ?? 'D. Dastardly'}
           </div>
