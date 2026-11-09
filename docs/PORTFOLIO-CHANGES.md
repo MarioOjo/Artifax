@@ -364,6 +364,19 @@ demo account (3.6).
 - **Evidence:** `/health` on the new address returns `ok` with the database connected and the latest commit, and
   allows the dev server's origin through CORS. Frontend 55 of 55 passing with a clean type check.
 
+### 2.29 Login alert, dashboard loading and dead controls
+- **Problem:** The login screen showed a grey "Input required / Enter details to continue." alert before anything
+  had been typed. The dashboard's Active and Queued Jobs said "No active jobs" until their data arrived, so the
+  counts seemed to change by themselves. In the top bar, the branch name looked like a button but did nothing, and
+  the "Artifax" breadcrumb had a home icon but did not link anywhere. "First time?" on the 2FA screen was plain text
+  with a click handler, so keyboard users could not reach it, and the theme toggle had no label for screen readers.
+- **Fix:** The login alert only appears after a failed sign-in. The dashboard shows "Loading jobs..." until the
+  first jobs request finishes. The home breadcrumb links to the dashboard and the current page is marked for screen
+  readers. The branch name is a plain label. "First time?" is a button, and the theme toggle is labelled
+  "Switch to light theme" or "Switch to dark theme".
+- **Tests:** New tests cover each change and fail against the previous code, apart from one that checks the login
+  error still appears after a failed sign-in. Frontend 60 of 60 passing with a clean type check.
+
 ---
 
 ## 3. Enhancement: secure, transactional crafting

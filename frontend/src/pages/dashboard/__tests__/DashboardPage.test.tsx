@@ -2,6 +2,11 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import DashboardPage from '../DashboardPage';
 import * as inventoryApi from '../../../services/inventoryApi';
+import { getCraftingQueue } from '../../../services/orderApi';
+
+jest.mock('../../../services/orderApi', () => ({
+  getCraftingQueue: jest.fn(),
+}));
 
 jest.mock('../../../services/inventoryApi', () => {
   const actual = jest.requireActual('../../../services/inventoryApi');
@@ -12,6 +17,27 @@ jest.mock('../../../services/inventoryApi', () => {
 });
 
 describe('DashboardPage', () => {
+  beforeEach(() => {
+    (getCraftingQueue as jest.Mock).mockResolvedValue({ activeItems: [], queuedItems: [] });
+  });
+
+  it('shows a loading state for jobs until they arrive, then the empty state', async () => {
+    (inventoryApi.getInventoryItems as jest.Mock).mockResolvedValue([]);
+    let resolveQueue: (value: unknown) => void = () => {};
+    (getCraftingQueue as jest.Mock).mockReturnValue(new Promise((resolve) => { resolveQueue = resolve; }));
+
+    render(<DashboardPage />);
+
+    expect(screen.getAllByText('Loading jobs...')).toHaveLength(2);
+    expect(screen.queryByText('No active jobs')).not.toBeInTheDocument();
+
+    resolveQueue({ activeItems: [], queuedItems: [] });
+
+    expect(await screen.findByText('No active jobs')).toBeInTheDocument();
+    expect(screen.getByText('No queued jobs')).toBeInTheDocument();
+    expect(screen.queryByText('Loading jobs...')).not.toBeInTheDocument();
+  });
+
   it('renders preview rows from API', async () => {
     (inventoryApi.getInventoryItems as jest.Mock).mockResolvedValue([
       {
