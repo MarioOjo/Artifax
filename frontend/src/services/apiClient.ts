@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const rawApiBase = process.env.REACT_APP_API_BASE || 'https://artifax-5lqg.onrender.com';
+const rawApiBase = process.env.REACT_APP_API_BASE || 'https://artifax-x8pr.onrender.com';
 const normalizedApiBase = rawApiBase.replace(/\/+$/, '');
 const API_BASE = normalizedApiBase.endsWith('/api') ? normalizedApiBase : `${normalizedApiBase}/api`;
 
